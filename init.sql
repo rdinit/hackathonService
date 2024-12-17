@@ -1,10 +1,3 @@
--- Таблица link
-create table link (
-    id uuid primary key,
-    short_link text unique not null,
-    long_link text not null
-);
-
 -- Таблица hackathon
 create table hackathon (
     id uuid primary key,
@@ -18,6 +11,13 @@ create table hackathon (
     type text not null, -- "online" или "offline"
     created_at timestamp default current_timestamp not null,
     updated_at timestamp default current_timestamp not null
+);
+
+-- Таблица link
+create table link (
+    id uuid primary key,
+    short_link text unique not null,
+    long_link text not null
 );
 
 -- Таблица hacker

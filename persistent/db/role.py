@@ -8,4 +8,3 @@ class Role(Base, WithId):
     __tablename__ = "role"
 
     name = Column(Text, nullable=False)
-    hacker_id = Column(UUID(as_uuid=True), ForeignKey("hacker.id"), nullable=False)

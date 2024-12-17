@@ -25,3 +25,18 @@ class RoleRepository:
             return None
 
         return dict(row)
+
+    async def get_role_by_name(self, name: str) -> dict | None:
+        """
+        Возвращает роль по её имени.
+        """
+        stmp = select(Role).where(Role.name == name).limit(1)
+
+        async with self._sessionmaker() as session:
+            resp = await session.execute(stmp)
+
+        row = resp.fetchone()
+        if row is None:
+            return None
+
+        return dict(row)

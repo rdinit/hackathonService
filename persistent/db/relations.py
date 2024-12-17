@@ -14,7 +14,6 @@ hacker_team_association = Table(
 
 # Importing all models
 from hacker import Hacker
-from role import Role
 from team import Team
 from hackathon import Hackathon
 from winner_solution import WinnerSolution
@@ -22,8 +21,6 @@ from winner_solution import WinnerSolution
 # Adding relationships to models
 Hacker.roles = relationship("Role", back_populates="hacker")
 Hacker.teams = relationship("Team", secondary=hacker_team_association, back_populates="members")
-
-Role.hacker = relationship("Hacker", back_populates="roles")
 
 Team.members = relationship("Hacker", secondary=hacker_team_association, back_populates="teams")
 Team.winner_solutions = relationship("WinnerSolution", back_populates="team")
