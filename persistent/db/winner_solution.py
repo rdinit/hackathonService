@@ -8,8 +8,8 @@ from datetime import datetime
 class WinnerSolution(Base, WithId):
     __tablename__ = "winner_solution"
 
-    hack_uuid = Column(UUID(as_uuid=True), nullable=False)
-    team_uuid = Column(UUID(as_uuid=True), nullable=False)
+    hackathon = Column(UUID(as_uuid=True), nullable=False)
+    team = Column(UUID(as_uuid=True), nullable=False)
     win_money = Column(Float, nullable=False)
     link_to_solution = Column(Text, nullable=False)
     link_to_presentation = Column(Text, nullable=False)

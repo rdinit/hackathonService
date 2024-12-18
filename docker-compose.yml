@@ -9,7 +9,7 @@ services:
       APP_UVICORN: '{"host": "0.0.0.0", "port": 8000}'
       APP_PG: '{"host": "postgres"}'
 
-    image: "auxxxxx/itam_hack_service202412141607"
+    image: "auxxxxx/itam_hack_service202412181356"
     ports:
       # вывести ли порты в материнскую систему
       - 8000:8000
@@ -25,5 +25,5 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
-      - "./data/pg/:/var/lib/postgresql/data/"
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data/pg/:/var/lib/postgresql/data/

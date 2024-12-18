@@ -1,10 +1,3 @@
--- Таблица link
-create table link (
-    id uuid primary key,
-    short_link text unique not null,
-    long_link text not null
-);
-
 -- Таблица hackathon
 create table hackathon (
     id uuid primary key,
@@ -23,10 +16,8 @@ create table hackathon (
 -- Таблица hacker
 create table hacker (
     id uuid primary key,
-    user_uuid uuid not null unique,
+    user_id uuid not null unique,
     name text not null,
-    active_teams_uuids uuid[] default '{}'::uuid[] not null,
-    roles_uuids uuid[] default '{}'::uuid[] not null,
     created_at timestamp default current_timestamp not null,
     updated_at timestamp default current_timestamp not null
 );
@@ -38,7 +29,7 @@ create table role (
 );
 
 -- Таблица для связи hacker и role (one-to-many)
-create table hacker_role (
+create table hacker_role_association (
     hacker_id uuid not null,
     role_id uuid not null,
     primary key (hacker_id, role_id),
@@ -52,14 +43,13 @@ create table team (
     owner_uuid uuid not null,
     name text not null,
     size integer not null,
-    members_uuids uuid[] default '{}'::uuid[] not null,
     created_at timestamp default current_timestamp not null,
     updated_at timestamp default current_timestamp not null,
     foreign key (owner_uuid) references hacker (id) on delete cascade
 );
 
 -- Таблица для связи hacker и team (many-to-many)
-create table hacker_team (
+create table hacker_team_associations (
     hacker_id uuid not null,
     team_id uuid not null,
     primary key (hacker_id, team_id),
