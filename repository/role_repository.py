@@ -1,3 +1,5 @@
+from typing import cast, List
+
 from loguru import logger
 
 from infrastructure.db.connection import pg_connection
@@ -16,17 +18,27 @@ class RoleRepository:
             await session.execute(stmp)
             await session.commit()
 
-    async def get_role_by_id(self, role_id: int) -> dict | None:
-        stmp = select(Role).where(Role.role_id == role_id).limit(1)
+    async def get_all_roles(self) -> List[Role]:
+        """
+        Метод для получения всех ролей из базы данных.
+        """
+        stmp = select(Role)
+
+        async with self._sessionmaker() as session:
+            resp = await session.execute(stmp)
+
+            rows = resp.fetchall()  # Извлекаем все строки
+            roles = [row[0] for row in rows]  # Преобразуем их в список объектов Role
+            return roles
+
+    async def get_role_by_id(self, role_id: int) -> Role | None:
+        stmp = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmp)
 
         row = resp.fetchone()
-        if row is None:
-            return None
-
-        return dict(row)
+        return row
 
     async def get_role_by_name(self, name: str) -> Role | None:
         """
@@ -36,7 +48,7 @@ class RoleRepository:
         logger.debug(f"Тип Role.name: {type(Role.name)}")
         logger.debug(f"Тип name: {type(name)}")
 
-        stmp = select(Role).where(Role.name == name).limit(1)
+        stmp = select(Role).where(cast("ColumnElement[bool]", Role.name == name)).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmp)

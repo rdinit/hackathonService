@@ -11,6 +11,7 @@ class Team(Base, WithId):
     owner_uuid = Column(UUID(as_uuid=True), nullable=False)
     name = Column(Text, nullable=False)
     size = Column(Integer, nullable=False)
-    members_uuids = Column(ARRAY(UUID(as_uuid=True)), default=[], nullable=False)
+    members = Column(ARRAY(UUID(as_uuid=True)), default=[], nullable=False)
+    winner_solutions = Column(ARRAY(UUID(as_uuid=True)), default=[], nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

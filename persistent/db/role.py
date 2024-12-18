@@ -3,6 +3,7 @@ from sqlalchemy import Column, Text, Integer, Boolean, DateTime, Float, UUID, Fo
 from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 
+
 # Таблица ролей для хакатонов
 class Role(Base, WithId):
     __tablename__ = "role"
