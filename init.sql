@@ -49,7 +49,7 @@ create table team (
 );
 
 -- Таблица для связи hacker и team (many-to-many)
-create table hacker_team (
+create table hacker_team_associations (
     hacker_id uuid not null,
     team_id uuid not null,
     primary key (hacker_id, team_id),
