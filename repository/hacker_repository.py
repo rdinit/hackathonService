@@ -48,26 +48,6 @@ class HackerRepository:
 
         return hacker_id
 
-    async def update_roles(self, hacker_id: UUID, roles: List[Role] = None) -> None:
-        """
-        Метод для обновления данных хакера по его ID.
-        Обновляются только те поля, которые переданы в аргументах (name и/или roles).
-        """
-        updated_at = datetime.utcnow()
-
-        # Формируем словарь с обновляемыми данными
-        update_data = {"updated_at": updated_at}
-
-        if roles is not None:
-            update_data["roles"] = roles  # Если роли передаются, обновляем их
-
-        stmt = update(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).values(update_data)
-
-        async with self._sessionmaker() as session:
-            # Выполняем запрос на обновление
-            result = await session.execute(stmt)
-            await session.commit()
-
     async def get_hacker_by_id(self, hacker_id: UUID) -> Hacker | None:
         # Используем user_uuid для поиска хакера
         stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).limit(1)
@@ -86,4 +66,4 @@ class HackerRepository:
             resp = await session.execute(stmt)
 
         row = resp.fetchone()
-        return row
+        return row[0]

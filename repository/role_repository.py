@@ -38,7 +38,7 @@ class RoleRepository:
             resp = await session.execute(stmp)
 
         row = resp.fetchone()
-        return row
+        return row[0]
 
     async def get_role_by_name(self, name: str) -> Role | None:
         """

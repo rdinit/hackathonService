@@ -54,6 +54,8 @@ class HackerService:
             # Добавляем роли как элементы списка
             hacker.roles.extend(roles)  # Данный шаг добавляет роли в список
 
+            #TODO добавить проверку, чтобы не было двух одинаковых ролей у одного хакера
+
             # Обновляем поле updated_at
             hacker.updated_at = datetime.utcnow()
 
@@ -68,14 +70,17 @@ class HackerService:
         Метод для обновления ролей хакера.
         В SQLAlchemy это обновит связанные записи в таблице через промежуточную таблицу.
         """
-        hacker = await self.find_hacker_by_id(hacker_id)
+        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
 
         if hacker:
-            # Очистка текущих ролей
-            hacker.roles.clear()
-
-            # Добавляем новые роли
-            hacker.roles.extend(roles)
+            # Добавляем роли как элементы списка
+            hacker.roles = roles  # Данный шаг добавляет роли в список
 
             # Обновляем поле updated_at
             hacker.updated_at = datetime.utcnow()
+
+            # Сохраняем изменения в базе данных
+            async with self._sessionmaker() as session:
+                # Для того чтобы изменения были зафиксированы в базе данных
+                session.add(hacker)  # Добавляем объект в сессию
+                await session.commit()  # Совершаем коммит
