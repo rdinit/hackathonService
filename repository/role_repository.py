@@ -1,3 +1,5 @@
+from loguru import logger
+
 from infrastructure.db.connection import pg_connection
 from persistent.db.role import Role
 from sqlalchemy import insert, select
@@ -26,17 +28,24 @@ class RoleRepository:
 
         return dict(row)
 
-    async def get_role_by_name(self, name: str) -> dict | None:
+    async def get_role_by_name(self, name: str) -> Role | None:
         """
-        Возвращает роль по её имени.
+        Возвращает объект Role по его имени.
         """
+        logger.debug(f"Поиск роли с именем: {name}")
+        logger.debug(f"Тип Role.name: {type(Role.name)}")
+        logger.debug(f"Тип name: {type(name)}")
+
         stmp = select(Role).where(Role.name == name).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmp)
 
-        row = resp.fetchone()
-        if row is None:
-            return None
+            row = resp.fetchone()
+            if row is None:
+                logger.warning(f"Роль с именем {name} не найдена")
+                return None
 
-        return dict(row)
+            role = row[0]  # Извлекаем объект Role из кортежа
+            logger.debug(f"Найдена роль: {role}")
+            return role
