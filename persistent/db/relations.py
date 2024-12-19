@@ -18,6 +18,14 @@ hacker_team_association = Table(
     Column("team_id", UUID(as_uuid=True), ForeignKey("team.id"), primary_key=True),
 )
 
+# Many-to-Many: Hackathon <-> Team (Winners)
+hackathon_winner_association = Table(
+    "hackathon_winner",
+    Base.metadata,
+    Column("hackathon_id", UUID(as_uuid=True), ForeignKey("hackathon.id"), primary_key=True),
+    Column("team_id", UUID(as_uuid=True), ForeignKey("team.id"), primary_key=True),
+)
+
 # # Establishing Relationships
 #
 # # Importing all models
