@@ -22,21 +22,22 @@ class HackerService:
         hackers = await self.hacker_repository.get_all_hackers()
         return hackers
 
-    async def create_hacker(self, user_id: UUID, name: str) -> Optional[UUID]:
+    async def create_hacker(self, user_id: UUID, name: str) -> UUID:
         """
         Метод для создания нового хакера.
         """
+        #TODO: добавить проверку что хакера с таким user_id ещё нет
         hacker_id = await self.hacker_repository.add_hacker(user_id, name)
         return hacker_id
 
-    async def find_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
+    async def get_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
         """
         Метод для поиска хакера по его уникальному ID.
         """
         hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
         return hacker
 
-    async def find_hacker_by_user_id(self, user_id: UUID) -> Optional[Hacker]:
+    async def get_hacker_by_user_id(self, user_id: UUID) -> Optional[Hacker]:
         """
         Метод для поиска хакера по его user_id (UUID).
         """
