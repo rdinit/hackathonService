@@ -9,7 +9,7 @@ services:
       APP_UVICORN: '{"host": "0.0.0.0", "port": 8000}'
       APP_PG: '{"host": "postgres"}'
 
-    image: "auxxxxx/itam_hack_service202412181356"
+    image: "auxxxxx/itam_hack_service202412182133"
     ports:
       # вывести ли порты в материнскую систему
       - 8000:8000
