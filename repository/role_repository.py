@@ -12,30 +12,30 @@ class RoleRepository:
         self._sessionmaker = pg_connection()
 
     async def create_role(self, name: str) -> None:
-        stmp = insert(Role).values({"name": name})
+        stmt = insert(Role).values({"name": name})
 
         async with self._sessionmaker() as session:
-            await session.execute(stmp)
+            await session.execute(stmt)
             await session.commit()
 
     async def get_all_roles(self) -> List[Role]:
         """
         Метод для получения всех ролей из базы данных.
         """
-        stmp = select(Role)
+        stmt = select(Role)
 
         async with self._sessionmaker() as session:
-            resp = await session.execute(stmp)
+            resp = await session.execute(stmt)
 
             rows = resp.fetchall()  # Извлекаем все строки
             roles = [row[0] for row in rows]  # Преобразуем их в список объектов Role
             return roles
 
     async def get_role_by_id(self, role_id: int) -> Role | None:
-        stmp = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
+        stmt = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
 
         async with self._sessionmaker() as session:
-            resp = await session.execute(stmp)
+            resp = await session.execute(stmt)
 
         row = resp.fetchone()
         return row[0]
@@ -48,16 +48,10 @@ class RoleRepository:
         logger.debug(f"Тип Role.name: {type(Role.name)}")
         logger.debug(f"Тип name: {type(name)}")
 
-        stmp = select(Role).where(cast("ColumnElement[bool]", Role.name == name)).limit(1)
+        stmt = select(Role).where(cast("ColumnElement[bool]", Role.name == name)).limit(1)
 
         async with self._sessionmaker() as session:
-            resp = await session.execute(stmp)
+            resp = await session.execute(stmt)
 
             row = resp.fetchone()
-            if row is None:
-                logger.warning(f"Роль с именем {name} не найдена")
-                return None
-
-            role = row[0]  # Извлекаем объект Role из кортежа
-            logger.debug(f"Найдена роль: {role}")
-            return role
+            return row[0] if row else None

@@ -20,10 +20,10 @@ class HackerRepository:
         Метод для получения всех хакеров.
         Возвращает список хакеров из базы данных.
         """
-        stmp = select(Hacker)
+        stmt = select(Hacker)
 
         async with self._sessionmaker() as session:
-            resp = await session.execute(stmp)
+            resp = await session.execute(stmt)
 
             rows = resp.fetchall()  # Извлекаем все строки
             hackers = [row[0] for row in rows]  # Преобразуем их в список объектов Hacker
@@ -56,14 +56,14 @@ class HackerRepository:
             resp = await session.execute(stmt)
 
         row = resp.fetchone()
-        return row[0]
+        return row[0] if row else None
 
     async def get_hacker_by_user_id(self, user_id: UUID) -> Hacker | None:
         # Используем user_uuid для поиска хакера
-        stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.user_uuid == user_id)).limit(1)
+        stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.user_id == user_id)).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
 
         row = resp.fetchone()
-        return row[0]
+        return row[0] if row else None

@@ -2,7 +2,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Table, Column, ForeignKey, UUID
 from persistent.db.base import Base
 
-# One-to-Many: Hacker -> Role
+# Many-to-Many: Hacker <-> Role
 hacker_role_association = Table(
     "hacker_role_association",
     Base.metadata,
@@ -18,28 +18,11 @@ hacker_team_association = Table(
     Column("team_id", UUID(as_uuid=True), ForeignKey("team.id"), primary_key=True),
 )
 
-# Many-to-Many: Hackathon <-> Team (Winners)
-hackathon_winner_association = Table(
-    "hackathon_winner",
+# Many-to-Many: WinnerSolution <-> Team
+winner_solution_team_hackathon_association = Table(
+    "winner_solution_team_hackathon_association",
     Base.metadata,
-    Column("hackathon_id", UUID(as_uuid=True), ForeignKey("hackathon.id"), primary_key=True),
+    Column("winner_solution_id", UUID(as_uuid=True), ForeignKey("winner_solution.id"), primary_key=True),
     Column("team_id", UUID(as_uuid=True), ForeignKey("team.id"), primary_key=True),
+    Column("hackathon_id", UUID(as_uuid=True), ForeignKey("hackathon.id"), primary_key=True),
 )
-
-# # Establishing Relationships
-#
-# # Importing all models
-# from team import Team
-# from hackathon import Hackathon
-# from winner_solution import WinnerSolution
-#
-# # Adding relationships to models
-# # Hacker.teams = relationship("Team", secondary=hacker_team_association, back_populates="members")
-#
-# Team.members = relationship("Hacker", secondary=hacker_team_association, back_populates="teams")
-# Team.winner_solutions = relationship("WinnerSolution", back_populates="team")
-#
-# Hackathon.winners = relationship("WinnerSolution", back_populates="hackathon")
-#
-# WinnerSolution.hackathon = relationship("Hackathon", back_populates="winners")
-# WinnerSolution.team = relationship("Team", back_populates="winner_solutions")
