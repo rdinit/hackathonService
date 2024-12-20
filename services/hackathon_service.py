@@ -30,7 +30,7 @@ class HackathonService:
         start_of_hack: datetime,
         end_of_hack: datetime,
         amount_money: float,
-        hack_type: str,
+        type: str,
     ) -> UUID:
         """
         Создаёт новый хакатон.
@@ -39,7 +39,7 @@ class HackathonService:
         hackathon_id = await self.hackathon_repository.create_hackathon(
             name, task_description, start_of_registration,
             end_of_registration, start_of_hack, end_of_hack,
-            amount_money, hack_type
+            amount_money, type
         )
 
         logger.info(f"Хакатон '{name}' успешно создан.")

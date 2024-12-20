@@ -33,7 +33,7 @@ class HackathonRepository:
         start_of_hack: datetime,
         end_of_hack: datetime,
         amount_money: float,
-        hack_type: str,
+        type: str,
     ) -> UUID | None:
         """
         Создание нового хакатона.
@@ -46,7 +46,7 @@ class HackathonRepository:
             "start_of_hack": start_of_hack,
             "end_of_hack": end_of_hack,
             "amount_money": amount_money,
-            "type": hack_type,
+            "type": type,
         })
 
         async with self._sessionmaker() as session:

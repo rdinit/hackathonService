@@ -7,12 +7,14 @@ from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
 from persistent.db.role import Role
 from repository.hacker_repository import HackerRepository
+from repository.role_repository import RoleRepository
 
 
 class HackerService:
     def __init__(self) -> None:
         self._sessionmaker = pg_connection()
         self.hacker_repository = HackerRepository()
+        self.role_repository = RoleRepository()
 
     async def get_all_hackers(self) -> List[Hacker]:
         """
@@ -82,7 +84,7 @@ class HackerService:
             logger.exception(f"Ошибка при поиске хакера с user_id: {user_id}.")
             raise
 
-    async def add_roles_to_hacker(self, hacker_id: UUID, roles: List[Role]) -> None:
+    async def add_roles_to_hacker(self, hacker_id: UUID, roles: List[UUID]) -> None:
         """
         Метод для добавления ролей хакеру.
         """
@@ -93,8 +95,8 @@ class HackerService:
                 logger.warning(f"Хакер с ID: {hacker_id} не найден.")
                 raise ValueError("Хакер не найден.")
 
-            existing_roles = {role.name for role in hacker.roles}
-            new_roles = [role for role in roles if role.name not in existing_roles]
+            existing_roles = [role.id for role in hacker.roles]
+            new_roles = [await self.role_repository.get_role_by_id(role_id) for role_id in roles if role_id not in existing_roles]
             hacker.roles.extend(new_roles)
             hacker.updated_at = datetime.utcnow()
 

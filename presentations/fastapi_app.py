@@ -6,9 +6,11 @@ from fastapi import FastAPI, HTTPException, Path, Response, status
 from loguru import logger
 from pydantic import BaseModel
 
-from presentations.routers import hackathon_router
+from presentations.routers.hackathon_router import hackathon_router
 from presentations.routers.hacker_router import hacker_router
+from presentations.routers.role_router import role_router
 from presentations.routers.team_router import team_router
+from presentations.routers.winner_solution_router import winner_solution_router
 
 from services.hacker_service import HackerService
 from services.role_service import RoleService
@@ -120,11 +122,13 @@ async def lifespan(app: FastAPI):
 
 # Создание приложения FastAPI с lifespan
 app = FastAPI(
-    title="Наше первое приложение!",
-    description="Прикольное приложение для генерации коротких ссылок",
+    title="Наше последнее приложение!",
+    description="Прикольное приложение (последнее)",
     lifespan=lifespan,
 )
 
+app.include_router(role_router)
 app.include_router(hacker_router)
 app.include_router(team_router)
 app.include_router(hackathon_router)
+app.include_router(winner_solution_router)

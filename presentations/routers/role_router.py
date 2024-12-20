@@ -61,21 +61,6 @@ async def get_all_roles():
         raise HTTPException(status_code=400, detail="Не удалось получить список ролей.")
 
 
-@role_router.post("/", response_model=RoleCreatePostResponse, status_code=201)
-async def create_role(role_request: RoleCreatePostRequest):
-    """
-    Создать новую роль.
-    """
-    logger.info(f"Попытка создания новой роли с именем: {role_request.name}.")
-    try:
-        role_id = await role_service.create_role(role_request.name)
-        logger.info(f"Роль успешно создана с ID: {role_id}.")
-        return RoleCreatePostResponse(id=role_id)
-    except Exception as e:
-        logger.exception("Ошибка при создании роли.")
-        raise HTTPException(status_code=400, detail="Не удалось создать роль.")
-
-
 @role_router.get("/{role_id}", response_model=RoleGetByIdResponse)
 async def get_role_by_id(role_id: UUID):
     """

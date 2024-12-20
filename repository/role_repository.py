@@ -4,7 +4,7 @@ from loguru import logger
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.role import Role
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, UUID
 
 
 class RoleRepository:
@@ -31,7 +31,7 @@ class RoleRepository:
             roles = [row[0] for row in rows]  # Преобразуем их в список объектов Role
             return roles
 
-    async def get_role_by_id(self, role_id: int) -> Role | None:
+    async def get_role_by_id(self, role_id: UUID) -> Role | None:
         stmt = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
 
         async with self._sessionmaker() as session:

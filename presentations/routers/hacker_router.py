@@ -19,6 +19,7 @@ hacker_router = APIRouter(
 
 
 class HackerDto(BaseModel):
+    id: UUID
     user_id: UUID
     name: str
     roles: List[str]
@@ -36,6 +37,11 @@ class HackerCreatePostRequest(BaseModel):
 
 class CreateHackerPostResponse(BaseModel):
     id: UUID
+
+
+class HackerAddRolesPostRequest(BaseModel):
+    hacker_id: UUID
+    role_ids: List[UUID]
 
 
 class GetHackerByIdGetRequest(BaseModel):
@@ -92,6 +98,22 @@ async def create(hacker_request: HackerCreatePostRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail="Хакер с таким user_id уже есть")
+
+
+@hacker_router.post("/add_roles", status_code=201)
+async def add_roles(request: HackerAddRolesPostRequest):
+    """
+    Add roles to a hacker
+
+    - **hacker_id**: Unique identifier of the hacker.
+    - **role_ids**: List of roles assigned to hacker.
+
+    Returns nothing.
+    """
+    try:
+        await hacker_service.add_roles_to_hacker(request.hacker_id, request.role_ids)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Не удалось добавить роли")
 
 
 @hacker_router.get("/{hacker_id}", response_model=GetHackerByIdGetResponse)

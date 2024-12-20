@@ -91,21 +91,21 @@ async def get_all_hackathons():
 
 
 @hackathon_router.post("/", response_model=HackathonCreatePostResponse, status_code=201)
-async def create_hackathon(hackathon_request: HackathonCreatePostRequest):
+async def create_hackathon(request: HackathonCreatePostRequest):
     """
     Создать новый хакатон.
     """
-    logger.info(f"Попытка создания нового хакатона: {hackathon_request.name}.")
+    logger.info(f"Попытка создания нового хакатона: {request.name}.")
     try:
         hackathon_id = await hackathon_service.create_hackathon(
-            name=hackathon_request.name,
-            task_description=hackathon_request.task_description,
-            start_of_registration=hackathon_request.start_of_registration,
-            end_of_registration=hackathon_request.end_of_registration,
-            start_of_hack=hackathon_request.start_of_hack,
-            end_of_hack=hackathon_request.end_of_hack,
-            amount_money=hackathon_request.amount_money,
-            type=hackathon_request.type,
+            name=request.name,
+            task_description=request.task_description,
+            start_of_registration=request.start_of_registration,
+            end_of_registration=request.end_of_registration,
+            start_of_hack=request.start_of_hack,
+            end_of_hack=request.end_of_hack,
+            amount_money=request.amount_money,
+            type=request.type,
         )
         logger.info(f"Хакатон успешно создан с ID: {hackathon_id}.")
         return HackathonCreatePostResponse(id=hackathon_id)

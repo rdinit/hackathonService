@@ -35,6 +35,9 @@ class TeamService:
             size=size,
         )
         logger.info(f"Команда '{name}' успешно создана.")
+
+        await self.add_hacker_to_team(new_team_id, owner_id)
+
         return new_team_id
 
     async def get_team_by_id(self, team_id: UUID) -> Optional[Team]:
@@ -46,31 +49,30 @@ class TeamService:
             logger.warning(f"Команда с ID '{team_id}' не найдена.")
         return team
 
-    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> None:
+    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> Optional[Team]:
         """
         Добавление участника в команду.
         """
-        team = await self.team_repository.get_team_by_id(team_id)
-        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
-        if not team:
-            raise ValueError(f"Команда с ID '{team_id}' не найдена.")
-
-        if len(team.hackers) >= team.size:
-            raise ValueError(f"Команда '{team.name}' уже заполнена.")
-
-        if not hacker:
-            raise ValueError(f"Хакер с ID '{hacker_id}' не найдена.")
-
-        # Добавляем роли как элементы списка
-        team.hackers.append(hacker)  # Данный шаг добавляет роли в список
-
-        # Обновляем поле updated_at
-        team.updated_at = datetime.utcnow()
-        hacker.updated_at = datetime.utcnow()
 
         # Сохраняем изменения в базе данных
         async with self._sessionmaker() as session:
+            team = await self.team_repository.get_team_by_id(team_id)
+            hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+            if not team:
+                raise ValueError(f"Команда с ID '{team_id}' не найдена.")
+
+            if len(team.hackers) >= team.size:
+                raise ValueError(f"Команда '{team.name}' уже заполнена.")
+
+            if not hacker:
+                raise ValueError(f"Хакер с ID '{hacker_id}' не найдена.")
+
+            # Добавляем роли как элементы списка
+            team.hackers.append(hacker)  # Данный шаг добавляет роли в список
+
+            # Обновляем поле updated_at
+            team.updated_at = datetime.utcnow()
+            hacker.updated_at = datetime.utcnow()
             # Для того чтобы изменения были зафиксированы в базе данных
-            session.add(team)
-            session.add(hacker)  # Добавляем объект в сессию
             await session.commit()  # Совершаем коммит
+            return team
