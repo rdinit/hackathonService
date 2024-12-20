@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Path, Response, status
 from loguru import logger
 from pydantic import BaseModel
 
+from presentations.routers import hackathon_router
 from presentations.routers.hacker_router import hacker_router
 from presentations.routers.team_router import team_router
 
@@ -126,3 +127,4 @@ app = FastAPI(
 
 app.include_router(hacker_router)
 app.include_router(team_router)
+app.include_router(hackathon_router)

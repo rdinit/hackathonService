@@ -2,17 +2,18 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
+from loguru import logger
 
 from persistent.db.team import Team
-from presentations.fastapi_app import hacker_service
 from services.team_service import TeamService
+from services.hacker_service import HackerService
 
-team_service = TeamService()  # Создаём экземпляр TeamService
+team_service = TeamService()
 
 team_router = APIRouter(
     prefix="/team",
     tags=["Teams"],
-    responses={404: {"size": "Not Found"}},
+    responses={404: {"description": "Not Found"}},
 )
 
 
@@ -21,7 +22,7 @@ class TeamDto(BaseModel):
     ownerID: UUID
     name: str
     size: int
-    hacker_ids: List[UUID]  # Список ID хакеров, состоящих в команде
+    hacker_ids: List[UUID]
 
 
 class TeamGetAllResponse(BaseModel):
@@ -48,19 +49,18 @@ class GetTeamByIdGetResponse(BaseModel):
     ownerID: UUID
     name: str
     size: int
-    hacker_ids: List[UUID]  # Список ID хакеров в команде
+    hacker_ids: List[UUID]
 
 
 @team_router.get("/", response_model=TeamGetAllResponse)
 async def get_all():
     """
     Получить список всех команд.
-
-    Возвращает информацию обо всех командах и их хакерах.
     """
+    logger.info("Получение списка всех команд.")
     try:
         teams = await team_service.get_all_teams()
-
+        logger.info(f"Успешно получено {len(teams)} команд.")
         return TeamGetAllResponse(
             teams=[
                 TeamDto(
@@ -73,9 +73,8 @@ async def get_all():
                 for team in teams
             ]
         )
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.exception("Ошибка при получении списка команд.")
         raise HTTPException(status_code=400, detail="Не удалось получить список команд.")
 
 
@@ -83,46 +82,37 @@ async def get_all():
 async def create(team_request: TeamCreatePostRequest):
     """
     Создать новую команду.
-
-    - **ownerID**: Идентификатор создателя команды.
-    - **name**: Название команды.
-    - **size**: Размер команды..
-
-    Возвращает идентификатор созданной команды.
     """
+    logger.info(f"Попытка создания команды: {team_request.name} с владельцем {team_request.ownerID}.")
     try:
         team_id = await team_service.create_team(team_request.ownerID, team_request.name, team_request.size)
-        return CreateTeamPostResponse(
-            id=team_id,
-        )
+        logger.info(f"Команда успешно создана с ID: {team_id}.")
+        return CreateTeamPostResponse(id=team_id)
     except Exception as e:
+        logger.exception("Ошибка при создании команды.")
         raise HTTPException(status_code=400, detail="Не удалось создать команду.")
 
 
-@team_router.post("/", response_model=GetTeamByIdGetResponse, status_code=201)
+@team_router.post("/add/", response_model=GetTeamByIdGetResponse, status_code=201)
 async def add_hacker_to_team(team_request: AddHackerToTeamRequest):
     """
     Добавить участника в команду по ID.
-
-    - **team_id**: Уникальный идентификатор команды.
-    - **hacker_id**: Уникальный идентификатор хакера, которого нужно добавить в команду.
-
-    Возвращает информацию о команде после добавления участника.
     """
+    logger.info(f"Попытка добавить хакера {team_request.hacker_id} в команду {team_request.team_id}.")
     try:
-        # Проверяем, существует ли команда и хакер
         team = await team_service.get_team_by_id(team_request.team_id)
         if not team:
+            logger.warning(f"Команда с ID {team_request.team_id} не найдена.")
             raise HTTPException(status_code=404, detail="Команда не найдена")
 
-        hacker = await hacker_service.get_hacker_by_id(team_request.hacker_id)
+        hacker = await HackerService().get_hacker_by_id(team_request.hacker_id)
         if not hacker:
+            logger.warning(f"Хакер с ID {team_request.hacker_id} не найден.")
             raise HTTPException(status_code=404, detail="Хакер не найден")
 
-        # Добавляем хакера в команду
         await team_service.add_hacker_to_team(team_request.team_id, team_request.hacker_id)
+        logger.info(f"Хакер {team_request.hacker_id} успешно добавлен в команду {team_request.team_id}.")
 
-        # Возвращаем обновленную информацию о команде
         return GetTeamByIdGetResponse(
             id=team.id,
             ownerID=team.owner_id,
@@ -130,9 +120,8 @@ async def add_hacker_to_team(team_request: AddHackerToTeamRequest):
             size=team.size,
             hacker_ids=[hacker.id for hacker in team.hackers],
         )
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.exception("Ошибка при добавлении хакера в команду.")
         raise HTTPException(status_code=400, detail="Не удалось добавить хакера в команду.")
 
 
@@ -140,17 +129,15 @@ async def add_hacker_to_team(team_request: AddHackerToTeamRequest):
 async def get_by_id(team_id: UUID):
     """
     Получить информацию о команде по её ID.
-
-    - **team_id**: Уникальный идентификатор команды.
-    - **ownerID**: Идентификатор создателя команды.
-
-    Возвращает информацию о команде и её хакерах.
     """
+    logger.info(f"Запрос информации о команде с ID {team_id}.")
     try:
         team = await team_service.get_team_by_id(team_id)
         if not team:
+            logger.warning(f"Команда с ID {team_id} не найдена.")
             raise HTTPException(status_code=404, detail="Команда не найдена")
 
+        logger.info(f"Команда с ID {team_id} найдена.")
         return GetTeamByIdGetResponse(
             id=team.id,
             ownerID=team.owner_id,
@@ -158,7 +145,6 @@ async def get_by_id(team_id: UUID):
             size=team.size,
             hacker_ids=[hacker.id for hacker in team.hackers],
         )
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.exception(f"Ошибка при получении информации о команде с ID {team_id}.")
         raise HTTPException(status_code=400, detail=str(e))

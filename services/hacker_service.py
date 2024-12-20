@@ -1,6 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
+from loguru import logger
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
@@ -19,69 +20,116 @@ class HackerService:
         Использует метод репозитория для извлечения всех хакеров из базы данных.
         Возвращает список хакеров в виде словарей.
         """
-        hackers = await self.hacker_repository.get_all_hackers()
-        return hackers
+        try:
+            logger.info("Начинается получение всех хакеров из базы данных.")
+            hackers = await self.hacker_repository.get_all_hackers()
+            logger.info(f"Успешно получены {len(hackers)} хакеров.")
+            return hackers
+        except Exception as e:
+            logger.exception("Ошибка при получении всех хакеров.")
+            raise
 
     async def create_hacker(self, user_id: UUID, name: str) -> UUID:
         """
         Метод для создания нового хакера.
         """
-        #TODO: добавить проверку что хакера с таким user_id ещё нет
-        hacker_id = await self.hacker_repository.add_hacker(user_id, name)
-        return hacker_id
+        try:
+            logger.info(f"Попытка создать хакера с user_id: {user_id} и именем: {name}.")
+            existing_hacker = await self.hacker_repository.get_hacker_by_user_id(user_id)
+            if existing_hacker:
+                logger.warning(f"Хакер с user_id: {user_id} уже существует.")
+                raise ValueError("Хакер с таким user_id уже существует.")
+
+            hacker_id = await self.hacker_repository.add_hacker(user_id, name)
+            logger.info(f"Хакер создан с ID: {hacker_id}.")
+            return hacker_id
+        except ValueError as ve:
+            logger.error(str(ve))
+            raise
+        except Exception as e:
+            logger.exception("Ошибка при создании хакера.")
+            raise
 
     async def get_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
         """
         Метод для поиска хакера по его уникальному ID.
         """
-        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
-        return hacker
+        try:
+            logger.info(f"Поиск хакера с ID: {hacker_id}.")
+            hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+            if hacker:
+                logger.info(f"Хакер с ID: {hacker_id} найден.")
+            else:
+                logger.warning(f"Хакер с ID: {hacker_id} не найден.")
+            return hacker
+        except Exception as e:
+            logger.exception(f"Ошибка при поиске хакера с ID: {hacker_id}.")
+            raise
 
     async def get_hacker_by_user_id(self, user_id: UUID) -> Optional[Hacker]:
         """
         Метод для поиска хакера по его user_id (UUID).
         """
-        hacker = await self.hacker_repository.get_hacker_by_user_id(user_id)
-        return hacker
+        try:
+            logger.info(f"Поиск хакера с user_id: {user_id}.")
+            hacker = await self.hacker_repository.get_hacker_by_user_id(user_id)
+            if hacker:
+                logger.info(f"Хакер с user_id: {user_id} найден.")
+            else:
+                logger.warning(f"Хакер с user_id: {user_id} не найден.")
+            return hacker
+        except Exception as e:
+            logger.exception(f"Ошибка при поиске хакера с user_id: {user_id}.")
+            raise
 
     async def add_roles_to_hacker(self, hacker_id: UUID, roles: List[Role]) -> None:
         """
         Метод для добавления ролей хакеру.
-        В SQLAlchemy это обновит связанные записи в таблице через промежуточную таблицу.
         """
-        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+        try:
+            logger.info(f"Добавление ролей хакеру с ID: {hacker_id}.")
+            hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+            if not hacker:
+                logger.warning(f"Хакер с ID: {hacker_id} не найден.")
+                raise ValueError("Хакер не найден.")
 
-        if hacker:
-            # Добавляем роли как элементы списка
-            hacker.roles.extend(roles)  # Данный шаг добавляет роли в список
-
-            #TODO добавить проверку, чтобы не было двух одинаковых ролей у одного хакера
-
-            # Обновляем поле updated_at
+            existing_roles = {role.name for role in hacker.roles}
+            new_roles = [role for role in roles if role.name not in existing_roles]
+            hacker.roles.extend(new_roles)
             hacker.updated_at = datetime.utcnow()
 
-            # Сохраняем изменения в базе данных
             async with self._sessionmaker() as session:
-                # Для того чтобы изменения были зафиксированы в базе данных
-                session.add(hacker)  # Добавляем объект в сессию
-                await session.commit()  # Совершаем коммит
+                session.add(hacker)
+                await session.commit()
+            logger.info(f"Роли успешно добавлены хакеру с ID: {hacker_id}.")
+        except ValueError as ve:
+            logger.error(str(ve))
+            raise
+        except Exception as e:
+            logger.exception(f"Ошибка при добавлении ролей хакеру с ID: {hacker_id}.")
+            raise
 
     async def update_hacker_roles(self, hacker_id: UUID, roles: List[Role]) -> None:
         """
         Метод для обновления ролей хакера.
-        В SQLAlchemy это обновит связанные записи в таблице через промежуточную таблицу.
         """
-        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+        try:
+            logger.info(f"Обновление ролей хакеру с ID: {hacker_id}.")
+            hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
+            if not hacker:
+                logger.warning(f"Хакер с ID: {hacker_id} не найден.")
+                raise ValueError("Хакер не найден.")
 
-        if hacker:
-            # Добавляем роли как элементы списка
-            hacker.roles = roles  # Данный шаг добавляет роли в список
-
-            # Обновляем поле updated_at
+            hacker.roles = roles
             hacker.updated_at = datetime.utcnow()
 
-            # Сохраняем изменения в базе данных
             async with self._sessionmaker() as session:
-                # Для того чтобы изменения были зафиксированы в базе данных
-                session.add(hacker)  # Добавляем объект в сессию
-                await session.commit()  # Совершаем коммит
+                session.add(hacker)
+                await session.commit()
+            logger.info(f"Роли успешно обновлены для хакера с ID: {hacker_id}.")
+        except ValueError as ve:
+            logger.error(str(ve))
+            raise
+        except Exception as e:
+            logger.exception(f"Ошибка при обновлении ролей хакера с ID: {hacker_id}.")
+            raise
