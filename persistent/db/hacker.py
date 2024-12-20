@@ -14,7 +14,7 @@ class Hacker(Base, WithId):
 
     user_id = Column(UUID(as_uuid=True), nullable=False, unique=True)
     name = Column(Text, nullable=False)
-    teams = relationship("Team", secondary=hacker_team_association, lazy='subquery')
+    teams = relationship("Team", secondary=hacker_team_association, back_populates="hackers", lazy='subquery')
     roles = relationship("Role", secondary=hacker_role_association, lazy='subquery')
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

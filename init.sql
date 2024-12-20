@@ -65,17 +65,10 @@ create table winner_solution (
     link_to_solution text not null,
     link_to_presentation text not null,
     can_share boolean default true not null,
-    created_at timestamp default current_timestamp not null,
-    updated_at timestamp default current_timestamp not null
-);
-
--- Таблица для связи hackathon и team (победители)
-create table winner_solution_team_hackathon_association (
-    winner_solution_id uuid not null,
     hackathon_id uuid not null,
     team_id uuid not null,
-    primary key (winner_solution_id, hackathon_id, team_id),
-    foreign key (winner_solution_id) references winner_solution (id) on delete cascade,
     foreign key (hackathon_id) references hackathon (id) on delete cascade,
-    foreign key (team_id) references team (id) on delete cascade
+    foreign key (team_id) references team (id) on delete cascade,
+    created_at timestamp default current_timestamp not null,
+    updated_at timestamp default current_timestamp not null
 );

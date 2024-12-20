@@ -5,8 +5,6 @@ from sqlalchemy import Column, Text, Integer, Boolean, DateTime, Float, UUID
 from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 
-from persistent.db.relations import winner_solution_team_hackathon_association
-
 
 # Таблица для хакатона
 class Hackathon(Base, WithId):
@@ -20,6 +18,6 @@ class Hackathon(Base, WithId):
     end_of_hack = Column(DateTime, nullable=False)
     amount_money = Column(Float, nullable=False)
     type = Column(Text, nullable=False)  # \"online\" или \"offline\"
-    winners = relationship("WinnerSolution", secondary=winner_solution_team_hackathon_association, lazy='subquery')
+    winner_solutions = relationship("WinnerSolution", back_populates="hackathon", lazy='subquery')
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
