@@ -29,10 +29,6 @@ class TeamService:
         """
         Создание новой команды.
         """
-        team_exists = await self.team_repository.get_team_by_name(name)
-        if team_exists:
-            raise ValueError(f"Команда с именем '{name}' уже существует.")
-
         new_team_id = await self.team_repository.create_team(
             owner_id=owner_id,
             name=name,
@@ -78,5 +74,3 @@ class TeamService:
             session.add(team)
             session.add(hacker)  # Добавляем объект в сессию
             await session.commit()  # Совершаем коммит
-
-        logger.info(f"Участник с ID '{hacker_id}' добавлен в команду '{team.name}'.")

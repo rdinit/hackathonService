@@ -39,22 +39,8 @@ class WinnerSolutionService:
         Создаёт новое призерское решение.
         """
         winner_solutions_id = await self.winner_solution_repository.create_winner_solution(
-            win_money, link_to_solution, link_to_presentation, can_share
+            hackathon_id, team_id, win_money, link_to_solution, link_to_presentation, can_share
         )
-        winner_solution = await self.winner_solution_repository.get_winner_solution_by_id(winner_solutions_id)
-        hackathon = await self.hackathon_repository.get_hackathon_by_id(hackathon_id)
-        team = await self.team_repository.get_team_by_id(team_id)
-
-        # TODO: проверить наличие хакатона и команды (возможно запрашивать через их сервис)
-
-        winner_solution.hackathon = hackathon
-        winner_solution.team = team
-
-        # Сохраняем изменения в базе данных
-        async with self._sessionmaker() as session:
-            # Для того чтобы изменения были зафиксированы в базе данных
-            session.add(winner_solution)
-            await session.commit()  # Совершаем коммит
 
         logger.info(f"Решение для хакатона '{hackathon_id}' успешно создано.")
 
