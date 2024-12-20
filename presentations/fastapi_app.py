@@ -7,6 +7,8 @@ from loguru import logger
 from pydantic import BaseModel
 
 from presentations.routers.hacker_router import hacker_router
+from presentations.routers.team_router import team_router
+
 from services.hacker_service import HackerService
 from services.role_service import RoleService
 from services.team_service import TeamService
@@ -123,4 +125,4 @@ app = FastAPI(
 )
 
 app.include_router(hacker_router)
-
+app.include_router(team_router)
