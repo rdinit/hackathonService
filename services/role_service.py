@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Optional
 
 from loguru import logger
+from sqlalchemy import UUID
 
 from persistent.db.role import Role
 from repository.role_repository import RoleRepository
@@ -30,3 +31,12 @@ class RoleService:
         if not roles:
             logger.warning("Нет ролей в системе.")
         return roles
+
+    async def get_role_by_id(self, role_id: UUID) -> Optional[Role]:
+        """
+        Получение команды по её идентификатору.
+        """
+        role = await self.role_repository.get_role_by_id(role_id)
+        if not role:
+            logger.warning(f"Роль с ID '{role}' не найдена.")
+        return role

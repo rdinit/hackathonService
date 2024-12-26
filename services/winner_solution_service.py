@@ -17,7 +17,7 @@ class WinnerSolutionService:
         self.hackathon_repository = HackathonRepository()
         self.team_repository = TeamRepository()
 
-    async def get_all_hackathons(self) -> List[WinnerSolution]:
+    async def get_all_winner_solutions(self) -> List[WinnerSolution]:
         """
         Возвращает все хакатоны.
         """
