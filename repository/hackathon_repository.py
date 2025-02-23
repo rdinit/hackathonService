@@ -23,17 +23,17 @@ class HackathonRepository:
             rows = resp.fetchall()  # Извлекаем все строки
             hackathons = [row[0] for row in rows]  # Преобразуем их в список объектов Hacker
             return hackathons
-    #TODO: добавить обработку created_at и updated_at по всему проекту
+
     async def create_hackathon(
-        self,
-        name: str,
-        task_description: str,
-        start_of_registration: datetime,
-        end_of_registration: datetime,
-        start_of_hack: datetime,
-        end_of_hack: datetime,
-        amount_money: float,
-        type: str,
+            self,
+            name: str,
+            task_description: str,
+            start_of_registration: datetime,
+            end_of_registration: datetime,
+            start_of_hack: datetime,
+            end_of_hack: datetime,
+            amount_money: float,
+            type: str,
     ) -> UUID | None:
         """
         Создание нового хакатона.

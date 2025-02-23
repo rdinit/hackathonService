@@ -6,25 +6,24 @@ services:
     restart: always
     environment:
       # переменные окружения
-      APP_UVICORN: '{"host": "0.0.0.0", "port": 8000}'
-      APP_PG: '{"host": "postgres"}'
+      APP_UVICORN: ${APP_UVICORN}
+      APP_PG: ${APP_PG}
     depends_on:
       - postgres
-    image: "auxxxxx/itam_hack_service202412202322"
+    image: ${IMAGE_BACKEND}
     ports:
       # вывести ли порты в материнскую систему
-      - 8000:8000
+      - ${PORTS_BACKEND}
 
   postgres:
     image: postgres:17.0 # какой image скачать с docket-hub
     environment:
-      POSTGRES_USER: db_main
-      POSTGRES_PASSWORD: db_main
-      PGUSER: db_main
-      PGPASSWORD: db_main
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: ${PGDATA}
     ports:
-      - "5432:5432"
+      - ${PORTS_POSTGRES}
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./data/pg/:/var/lib/postgresql/data/
