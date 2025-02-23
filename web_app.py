@@ -4,6 +4,7 @@ import uvicorn
 from presentations.fastapi_app import app
 from settings.settings import settings
 
+
 async def main() -> None:
     server = uvicorn.Server(
         uvicorn.Config(

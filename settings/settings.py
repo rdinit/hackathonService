@@ -3,19 +3,24 @@ import multiprocessing as mp
 from loguru import logger
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Postgres(BaseModel):
-    database: str = "db_main"
-    host: str = "localhost"
-    port: int = 5432
-    username: str = "db_main"
-    password: str = "db_main"
+    database: str = os.getenv("POSTGRES_DB")
+    host: str = os.getenv("POSTGRES_HOST")
+    port: int = os.getenv("POSTGRES_PORT")
+    username: str = os.getenv("POSTGRES_USER")
+    password: str = os.getenv("POSTGRES_PASSWORD")
+    url: str = os.getenv("POSTGRES_URL")
 
 
 class Uvicorn(BaseModel):
-    host: str = "localhost"
-    port: int = 8000
+    host: str = os.getenv("HOST_BACKEND")
+    port: int = os.getenv("PORT_BACKEND")
     workers: int = mp.cpu_count() * 2 + 1
 
 
