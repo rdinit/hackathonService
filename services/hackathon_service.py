@@ -34,8 +34,9 @@ class HackathonService:
     ) -> UUID:
         """
         Создаёт новый хакатон.
-        """
 
+        :raise IntegrityError: Если хакатон с таким названием и началом уже существует
+        """
         hackathon_id = await self.hackathon_repository.create_hackathon(
             name, task_description, start_of_registration,
             end_of_registration, start_of_hack, end_of_hack,

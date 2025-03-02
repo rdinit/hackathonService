@@ -30,7 +30,7 @@ class WinnerSolutionRepository:
         link_to_solution: str,
         link_to_presentation: str,
         can_share: bool = True,
-    ) -> UUID | None:
+    ) -> Optional[UUID]:
         """
         Создание нового призерского решения.
         """
@@ -51,7 +51,7 @@ class WinnerSolutionRepository:
 
         return winner_solution_id
 
-    async def get_winner_solution_by_id(self, solution_id: UUID) -> WinnerSolution | None:
+    async def get_winner_solution_by_id(self, solution_id: UUID) -> Optional[WinnerSolution]:
         """
         Получение призерского решения по ID.
         """
@@ -59,6 +59,7 @@ class WinnerSolutionRepository:
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
+
             row = resp.fetchone()
             return row[0] if row else None
 
@@ -71,6 +72,7 @@ class WinnerSolutionRepository:
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
             rows = resp.fetchall()
+
             return [row[0] for row in rows]
 
     async def get_winner_solutions_by_team(self, team_id: UUID) -> List[WinnerSolution]:
@@ -82,6 +84,7 @@ class WinnerSolutionRepository:
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
             rows = resp.fetchall()
+
             return [row[0] for row in rows]
 
     async def get_winner_solutions_by_team_and_hackathon(self, team_id: UUID, hackathon_id: UUID) -> Optional[WinnerSolution]:
@@ -94,4 +97,5 @@ class WinnerSolutionRepository:
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
             row = resp.fetchall()
+
             return row[0] if row else None

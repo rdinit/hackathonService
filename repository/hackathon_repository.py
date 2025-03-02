@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional, cast
 from loguru import logger
 from sqlalchemy import insert, select, delete, UUID
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from infrastructure.db.connection import pg_connection
 from persistent.db.hackathon import Hackathon
@@ -34,7 +35,7 @@ class HackathonRepository:
             end_of_hack: datetime,
             amount_money: float,
             type: str,
-    ) -> UUID | None:
+    ) -> Optional[UUID]:
         """
         Создание нового хакатона.
         """
@@ -53,11 +54,16 @@ class HackathonRepository:
             # Добавление хакера
             result = await session.execute(stmt)
             hackathon_id = result.inserted_primary_key[0]
-            await session.commit()
+
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                raise IntegrityError("Hackathon already exists.")
 
         return hackathon_id
 
-    async def get_hackathon_by_id(self, hackathon_id: UUID) -> Hackathon | None:
+    async def get_hackathon_by_id(self, hackathon_id: UUID) -> Optional[Hackathon]:
         """
         Получение хакатона по ID.
         """

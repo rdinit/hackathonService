@@ -10,7 +10,9 @@ create table hacker (
 -- Таблица role
 create table role (
     id uuid primary key,
-    name text not null
+    name text not null,
+    created_at timestamp default current_timestamp not null,
+    updated_at timestamp default current_timestamp not null
 );
 
 -- Таблица для связи hacker и role (one-to-many)
@@ -46,15 +48,17 @@ create table hacker_team_association (
 create table hackathon (
     id uuid primary key,
     name text not null,
-    task_description text not null,
-    start_of_registration timestamp with time zone not null,
-    end_of_registration timestamp with time zone not null,
+    task_description text,
+    start_of_registration timestamp with time zone,
+    end_of_registration timestamp with time zone,
     start_of_hack timestamp with time zone not null,
-    end_of_hack timestamp with time zone not null,
-    amount_money float not null,
-    type text not null, -- "online" или "offline"
+    end_of_hack timestamp with time zone,
+    amount_money float,
+    type text, -- "online" или "offline"
     created_at timestamp default current_timestamp not null,
-    updated_at timestamp default current_timestamp not null
+    updated_at timestamp default current_timestamp not null,
+
+    CONSTRAINT uq_name_start UNIQUE (name, start_of_hack)
 );
 
 

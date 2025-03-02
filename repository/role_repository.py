@@ -1,4 +1,4 @@
-from typing import cast, List
+from typing import cast, List, Optional
 
 from loguru import logger
 
@@ -10,13 +10,6 @@ from sqlalchemy import insert, select, UUID
 class RoleRepository:
     def __init__(self) -> None:
         self._sessionmaker = pg_connection()
-
-    async def create_role(self, name: str) -> None:
-        stmt = insert(Role).values({"name": name})
-
-        async with self._sessionmaker() as session:
-            await session.execute(stmt)
-            await session.commit()
 
     async def get_all_roles(self) -> List[Role]:
         """
@@ -31,16 +24,26 @@ class RoleRepository:
             roles = [row[0] for row in rows]  # Преобразуем их в список объектов Role
             return roles
 
-    async def get_role_by_id(self, role_id: UUID) -> Role | None:
+    async def create_role(self, name: str) -> Optional[UUID]:
+        stmt = insert(Role).values({"name": name})
+
+        async with self._sessionmaker() as session:
+            result = await session.execute(stmt)
+            role_id = result.inserted_primary_key[0]
+            await session.commit()
+
+        return role_id
+
+    async def get_role_by_id(self, role_id: UUID) -> Optional[Role]:
         stmt = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
 
         row = resp.fetchone()
-        return row[0]
+        return row[0] if row else None
 
-    async def get_role_by_name(self, name: str) -> Role | None:
+    async def get_role_by_name(self, name: str) -> Optional[Role]:
         """
         Возвращает объект Role по его имени.
         """

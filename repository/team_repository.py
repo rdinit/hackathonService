@@ -24,7 +24,7 @@ class TeamRepository:
             teams = [row[0] for row in rows]  # Преобразуем их в список объектов Hacker
             return teams
 
-    async def create_team(self, owner_id: UUID, name: str, size: int) -> UUID | None:
+    async def create_team(self, owner_id: UUID, name: str, size: int) -> Optional[UUID]:
         """
         Создание новой команды в базе данных.
         """
@@ -42,7 +42,7 @@ class TeamRepository:
 
         return team_id
 
-    async def get_team_by_id(self, team_id: UUID) -> Team | None:
+    async def get_team_by_id(self, team_id: UUID) -> Optional[Team]:
         """
         Получение команды по её идентификатору.
         """
@@ -54,7 +54,7 @@ class TeamRepository:
         row = resp.fetchone()
         return row[0] if row else None
 
-    async def get_team_by_name(self, name: str) -> Team | None:
+    async def get_team_by_name(self, name: str) -> Optional[Team]:
         """
         Получение команды по её имени.
         """

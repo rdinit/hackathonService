@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import cast, List
+from typing import cast, List, Optional
 
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
@@ -29,26 +30,29 @@ class HackerRepository:
             hackers = [row[0] for row in rows]  # Преобразуем их в список объектов Hacker
             return hackers
 
-    async def add_hacker(self, user_id: UUID, name: str) -> UUID | None:
-        created_at = updated_at = datetime.utcnow()  # Текущее время для created_at и updated_at
+    async def add_hacker(self, user_id: UUID, name: str) -> Optional[UUID]:
 
         # Создание хакера без ролей
         stmt = insert(Hacker).values({
             "user_id": user_id,
-            "name": name,
-            "created_at": created_at,
-            "updated_at": updated_at
+            "name": name
         })
 
         async with self._sessionmaker() as session:
             # Добавление хакера
             result = await session.execute(stmt)
             hacker_id = result.inserted_primary_key[0]
-            await session.commit()
+
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                raise IntegrityError("Hacker already exists.")
+
 
         return hacker_id
 
-    async def get_hacker_by_id(self, hacker_id: UUID) -> Hacker | None:
+    async def get_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
         # Используем user_uuid для поиска хакера
         stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).limit(1)
 
@@ -58,7 +62,7 @@ class HackerRepository:
         row = resp.fetchone()
         return row[0] if row else None
 
-    async def get_hacker_by_user_id(self, user_id: UUID) -> Hacker | None:
+    async def get_hacker_by_user_id(self, user_id: UUID) -> Optional[Hacker]:
         # Используем user_uuid для поиска хакера
         stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.user_id == user_id)).limit(1)
 
