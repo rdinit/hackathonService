@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List, Optional, cast
 from loguru import logger
-from sqlalchemy import insert, select, delete, UUID
+from sqlalchemy import select, delete, UUID
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from infrastructure.db.connection import pg_connection
@@ -25,7 +26,7 @@ class HackathonRepository:
             hackathons = [row[0] for row in rows]  # Преобразуем их в список объектов Hacker
             return hackathons
 
-    async def create_hackathon(
+    async def upsert_hackathon(
             self,
             name: str,
             task_description: str,
@@ -50,16 +51,21 @@ class HackathonRepository:
             "type": type,
         })
 
+        stmt.on_conflict_do_update(constraint="uq_hackathon_name_start", set_={
+            "task_description": task_description,
+            "start_of_registration": start_of_registration,
+            "end_of_registration": end_of_registration,
+            "end_of_hack": end_of_hack,
+            "amount_money": amount_money,
+            "type": type,
+            "updated_at": datetime.utcnow(),
+        })
+
         async with self._sessionmaker() as session:
-            # Добавление хакера
             result = await session.execute(stmt)
             hackathon_id = result.inserted_primary_key[0]
 
-            try:
-                await session.commit()
-            except IntegrityError:
-                await session.rollback()
-                raise IntegrityError("Hackathon already exists.")
+            await session.commit()
 
         return hackathon_id
 

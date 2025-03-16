@@ -1,27 +1,20 @@
 -- Таблица hacker
 create table hacker (
     id uuid primary key,
-    user_id uuid not null unique,
+    user_id uuid not null,
     name text not null,
     created_at timestamp default current_timestamp not null,
-    updated_at timestamp default current_timestamp not null
-);
+    updated_at timestamp default current_timestamp not null,
 
--- Таблица role
-create table role (
-    id uuid primary key,
-    name text not null,
-    created_at timestamp default current_timestamp not null,
-    updated_at timestamp default current_timestamp not null
+    CONSTRAINT uq_hacker_user_id UNIQUE (user_id)
 );
 
 -- Таблица для связи hacker и role (one-to-many)
 create table hacker_role_association (
     hacker_id uuid not null,
-    role_id uuid not null,
+    role text not null check (role in (select ('admin', 'backend', 'frontend', 'ml', 'designer'))),
     primary key (hacker_id, role_id),
-    foreign key (hacker_id) references hacker (id) on delete cascade,
-    foreign key (role_id) references role (id) on delete cascade
+    foreign key (hacker_id) references hacker (id) on delete cascade
 );
 
 -- Таблица team
@@ -29,10 +22,12 @@ create table team (
     id uuid primary key,
     owner_id uuid not null,
     name text not null,
-    size integer not null,
+    max_size integer not null check (max_size > 0),
     created_at timestamp default current_timestamp not null,
     updated_at timestamp default current_timestamp not null,
-    foreign key (owner_id) references hacker (id) on delete cascade
+    foreign key (owner_id) references hacker (id) on delete cascade,
+
+    CONSTRAINT uq_team_owner_id_name UNIQUE (owner_id, name)
 );
 
 -- Таблица для связи hacker и team (many-to-many)
@@ -58,7 +53,7 @@ create table hackathon (
     created_at timestamp default current_timestamp not null,
     updated_at timestamp default current_timestamp not null,
 
-    CONSTRAINT uq_name_start UNIQUE (name, start_of_hack)
+    CONSTRAINT uq_hackathon_name_start UNIQUE (name, start_of_hack)
 );
 
 
@@ -74,5 +69,7 @@ create table winner_solution (
     foreign key (hackathon_id) references hackathon (id) on delete cascade,
     foreign key (team_id) references team (id) on delete cascade,
     created_at timestamp default current_timestamp not null,
-    updated_at timestamp default current_timestamp not null
+    updated_at timestamp default current_timestamp not null,
+
+    CONSTRAINT uq_winner_solution_hackathon_id_team_id UNIQUE (hackathon_id, team_id)
 );

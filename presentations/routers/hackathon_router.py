@@ -68,6 +68,7 @@ async def get_all_hackathons():
     logger.info("Начало обработки запроса на получение всех хакатонов.")
     try:
         hackathons = await hackathon_service.get_all_hackathons()
+
         logger.info(f"Успешно получено {len(hackathons)} хакатонов.")
         return HackathonGetAllResponse(
             hackathons=[

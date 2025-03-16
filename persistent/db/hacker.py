@@ -15,7 +15,7 @@ class Hacker(Base, WithMetadata):
     user_id = Column(UUID(as_uuid=True), nullable=False, unique=True)
     name = Column(Text, nullable=False)
     teams = relationship("Team", secondary=hacker_team_association, back_populates="hackers", lazy='subquery')
-    roles = relationship("Role", secondary=hacker_role_association, lazy='subquery')
+    roles = relationship("String", secondary=hacker_role_association, lazy='subquery')
 
 
 
