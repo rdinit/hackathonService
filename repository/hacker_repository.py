@@ -6,7 +6,8 @@ from sqlalchemy.exc import IntegrityError
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
-from sqlalchemy import select, update, delete, UUID, String
+from persistent.db.role import Role, RoleEnum
+from sqlalchemy import ColumnElement, select, update, delete, UUID, String, Table
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -31,8 +32,9 @@ class HackerRepository:
             return hackers
 
     async def upsert_hacker(self, user_id: UUID, name: str) -> Optional[UUID]:
-
-        # Создание хакера без ролей
+        """
+        Создание или обновление хакера без ролей
+        """
         stmt = insert(Hacker).values({
             "user_id": user_id,
             "name": name
@@ -52,23 +54,35 @@ class HackerRepository:
 
         return hacker_id
 
-    async def update_hacker_roles(self, hacker_id: UUID, roles: List[String]) -> bool:
-
-        hacker = await self.get_hacker_by_id(hacker_id)
-
-        if not hacker:
-            raise ValueError("Хакер не найден")
-
-        hacker.roles = roles
-
+    async def update_hacker_roles(self, hacker_id: UUID, role_ids: List[UUID]) -> bool:
+        """
+        Обновление ролей хакера по их ID из списка доступных ролей.
+        """
         async with self._sessionmaker() as session:
+            # Получаем хакера
+            hacker_stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).limit(1)
+            hacker_result = await session.execute(hacker_stmt)
+            hacker_row = hacker_result.fetchone()
+            
+            if not hacker_row:
+                return False
+                
+            hacker = hacker_row[0]
+                
+            # Получаем роли по указанным ID
+            role_stmt = select(Role).where(Role.id.in_(role_ids))
+            role_result = await session.execute(role_stmt)
+            roles = role_result.scalars().all()
+            
+            # Устанавливаем новые роли для хакера
+            hacker.roles = roles
+            
             try:
                 await session.commit()
-            except IntegrityError as error:
+                return True
+            except IntegrityError:
                 await session.rollback()
                 return False
-
-        return True
 
     async def get_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
         # Используем user_uuid для поиска хакера

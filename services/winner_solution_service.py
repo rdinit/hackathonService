@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import UUID
 
@@ -30,7 +30,7 @@ class WinnerSolutionService:
         link_to_solution: str,
         link_to_presentation: str,
         can_share: bool = True,
-    ) -> (UUID, bool):
+    ) -> Tuple[UUID, bool]:
         """
         Создаёт новое призерское решение.
 
@@ -45,7 +45,7 @@ class WinnerSolutionService:
 
         return winner_solutions_id, True
 
-    async def get_winner_solution_by_id(self, solution_id: UUID) -> (WinnerSolution, bool):
+    async def get_winner_solution_by_id(self, solution_id: UUID) -> Tuple[WinnerSolution, bool]:
         """
         Получение призерского решения по ID.
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import UUID
 
@@ -42,7 +42,7 @@ class HackathonService:
 
         return hackathon_id
 
-    async def get_hackathon_by_id(self, hackathon_id: UUID) -> (Hackathon, bool):
+    async def get_hackathon_by_id(self, hackathon_id: UUID) -> Tuple[Hackathon, bool]:
         """
         Возвращает хакатон по ID.
 

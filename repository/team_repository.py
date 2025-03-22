@@ -1,4 +1,4 @@
-from typing import cast, List, Optional
+from typing import Tuple, cast, List, Optional
 
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
 from persistent.db.team import Team
-from sqlalchemy import select, delete, UUID
+from sqlalchemy import ColumnElement, select, delete, UUID
 from sqlalchemy.dialects.postgresql import insert
 
 
@@ -49,28 +49,30 @@ class TeamRepository:
 
         return team_id
 
-    async def add_hacker_to_team(self, team_id: UUID, hacker: Hacker) -> (Optional[Team], int):
+    async def add_hacker_to_team(self, team_id: UUID, hacker: Hacker) -> Tuple[Optional[Team], int]:
         """
         Добавление участника в команду.
 
         :returns -1 Команда не найдена
         :returns -2 Команда уже заполнена
         """
-
-        team = await self.get_team_by_id(team_id)
-
-        if not team:
-            return None, -1
-
-        if len(team.hackers) >= team.max_size:
-            return None, -2
-
-        team.hackers.append(hacker)
-
         async with self._sessionmaker() as session:
+            stmt = select(Team).where(cast("ColumnElement[bool]", Team.id == team_id)).limit(1)
+            resp = await session.execute(stmt)
+            row = resp.fetchone()
+            
+            if not row:
+                return None, -1
+                
+            team = row[0]
+            
+            if len(team.hackers) >= team.max_size:
+                return None, -2
+                
+            team.hackers.append(hacker)
             await session.commit()
-
-        return team, 1
+            
+            return team, 1
 
     async def get_team_by_id(self, team_id: UUID) -> Optional[Team]:
         """

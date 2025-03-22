@@ -1,11 +1,12 @@
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import String
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.hacker import Hacker
+from persistent.db.role import RoleEnum
 from repository.hacker_repository import HackerRepository
 
 
@@ -29,7 +30,7 @@ class HackerService:
 
         return hacker_id
 
-    async def get_hacker_by_id(self, hacker_id: UUID) -> (Hacker, bool):
+    async def get_hacker_by_id(self, hacker_id: UUID) -> Tuple[Hacker, bool]:
         """
         Возвращает хакера по ID.
 
@@ -42,7 +43,7 @@ class HackerService:
 
         return hacker, True
 
-    async def get_hacker_by_user_id(self, user_id: UUID) -> (Hacker, bool):
+    async def get_hacker_by_user_id(self, user_id: UUID) -> Tuple[Hacker, bool]:
         """
         Возвращает хакера по user_id (UUID).
 
@@ -55,10 +56,10 @@ class HackerService:
 
         return hacker, True
 
-    async def update_hacker_roles(self, hacker_id: UUID, roles: List[String]) -> bool:
+    async def update_hacker_roles(self, hacker_id: UUID, role_ids: List[UUID]) -> bool:
         """
         Метод для обновления ролей хакера.
 
-        :returns False Недопустимые значения ролей
+        :returns: False если произошла ошибка (хакер не найден или недопустимые роли)
         """
-        return await self.hacker_repository.update_hacker_roles(hacker_id, roles)
+        return await self.hacker_repository.update_hacker_roles(hacker_id, role_ids)

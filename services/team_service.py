@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import UUID
 
@@ -24,7 +24,7 @@ class TeamService:
             logger.warning("Команды не найдены.")
         return teams
 
-    async def create_team(self, owner_id: UUID, name: str, max_size: int) -> (UUID, int):
+    async def create_team(self, owner_id: UUID, name: str, max_size: int) -> Tuple[UUID, int]:
         """
         Создаёт новую команду.
 
@@ -47,11 +47,11 @@ class TeamService:
 
         return new_team_id, 1
 
-    async def get_team_by_id(self, team_id: UUID) -> (Team, bool):
+    async def get_team_by_id(self, team_id: UUID) -> Tuple[Team, bool]:
         """
         Получение команды по её идентификатору.
 
-        :returns -1 Команда не найдена
+        :returns False Команда не найдена
         """
         team = await self.team_repository.get_team_by_id(team_id)
 
@@ -60,7 +60,7 @@ class TeamService:
 
         return team, True
 
-    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> (Team, int):
+    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> Tuple[Team, int]:
         """
         Добавление участника в команду.
 
@@ -74,11 +74,13 @@ class TeamService:
         if not hacker:
             return None, -1
 
-        team, ok = self.team_repository.add_hacker_to_team(team_id, hacker)
+        team, ok = await self.team_repository.add_hacker_to_team(team_id, hacker)
 
         if ok == -1:
             return None, -2
 
         if ok == -2:
             return None, -3
+        
+        return team, 1
 
