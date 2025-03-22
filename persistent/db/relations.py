@@ -1,5 +1,4 @@
-from sqlalchemy.orm import relationship
-from sqlalchemy import Table, Column, ForeignKey, UUID
+from sqlalchemy import Table, Column, ForeignKey, UUID, Text
 from persistent.db.base import Base
 
 # Many-to-Many: Hacker <-> Role

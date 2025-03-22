@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import UUID
 
@@ -17,11 +17,10 @@ class HackathonService:
         Возвращает все хакатоны.
         """
         hackathons = await self.hackathon_repository.get_all_hackathons()
-        if not hackathons:
-            logger.warning("Хакатоны не найдены.")
+
         return hackathons
 
-    async def create_hackathon(
+    async def upsert_hackathon(
         self,
         name: str,
         task_description: str,
@@ -33,23 +32,25 @@ class HackathonService:
         type: str,
     ) -> UUID:
         """
-        Создаёт новый хакатон.
+        Создаёт или обновляет хакатон.
         """
-
-        hackathon_id = await self.hackathon_repository.create_hackathon(
+        hackathon_id = await self.hackathon_repository.upsert_hackathon(
             name, task_description, start_of_registration,
             end_of_registration, start_of_hack, end_of_hack,
             amount_money, type
         )
 
-        logger.info(f"Хакатон '{name}' успешно создан.")
         return hackathon_id
 
-    async def get_hackathon_by_id(self, hackathon_id: UUID) -> Optional[Hackathon]:
+    async def get_hackathon_by_id(self, hackathon_id: UUID) -> Tuple[Hackathon, bool]:
         """
-        Возвращает хакатон по его ID.
+        Возвращает хакатон по ID.
+
+        :returns False Хакатон не найден
         """
         hackathon = await self.hackathon_repository.get_hackathon_by_id(hackathon_id)
+
         if not hackathon:
-            logger.warning(f"Хакатон с ID {hackathon_id} не найден.")
-        return hackathon
+            return None, False
+
+        return hackathon, True

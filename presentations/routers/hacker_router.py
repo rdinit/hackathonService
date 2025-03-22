@@ -1,12 +1,14 @@
+import uuid
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
+from loguru import logger
 from pydantic import BaseModel
 from uuid import UUID
 
-from persistent.db.role import Role
 from persistent.db.team import Team
+from persistent.db.role import RoleEnum
 from services.hacker_service import HackerService
 
 hacker_service = HackerService()  # Создаём экземпляр RoleService
@@ -41,7 +43,7 @@ class CreateHackerPostResponse(BaseModel):
 
 class HackerAddRolesPostRequest(BaseModel):
     hacker_id: UUID
-    role_ids: List[UUID]
+    role_names: List[str]
 
 
 class GetHackerByIdGetRequest(BaseModel):
@@ -58,86 +60,64 @@ class GetHackerByIdGetResponse(BaseModel):
 @hacker_router.get("/", response_model=HackerGetAllResponse)
 async def get_all():
     """
-    Get all hackers.
-
-    Returns hackers' information including assigned roles.
+    Получить список всех хакатонщиков.
     """
-    try:
-        hackers = await hacker_service.get_all_hackers()
+    logger.info("hacker_get_all")
+    hackers = await hacker_service.get_all_hackers()
 
-        return HackerGetAllResponse(
-            hackers=[
-                HackerDto(id=hacker.id,
-                          user_id=hacker.user_id,
-                          name=hacker.name,
-                          roles=[role.name for role in hacker.roles],
-                          team_ids=[team.id for team in hacker.teams],)
-                for hacker in hackers
-            ]
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Чёто хз не работает чё1т :(")
+    return HackerGetAllResponse(
+        hackers=[
+            HackerDto(id=hacker.id,
+                      user_id=hacker.user_id,
+                      name=hacker.name,
+                      roles=[role.name for role in hacker.roles],
+                      team_ids=[team.id for team in hacker.teams], )
+            for hacker in hackers
+        ]
+    )
 
 
 @hacker_router.post("/", response_model=CreateHackerPostResponse, status_code=201)
-async def create(hacker_request: HackerCreatePostRequest):
+async def upsert(request: HackerCreatePostRequest):
     """
-    Create a new hacker.
-
-    - **user_id**: Unique identifier of the user.
-    - **name**: Name of the hacker.
-
-    Returns the created hacker with assigned roles.
+    Создать или обновить хакатонщика.
     """
-    try:
-        hacker_id = await hacker_service.create_hacker(hacker_request.user_id, hacker_request.name)
-        return CreateHackerPostResponse(
-            id=hacker_id,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Хакер с таким user_id уже есть")
+    logger.info(f"hacker_post: {request.user_id}")
+    hacker_id = await hacker_service.upsert_hacker(request.user_id, request.name)
+
+    return CreateHackerPostResponse(
+        id=hacker_id,
+    )
 
 
-@hacker_router.post("/add_roles", status_code=201)
-async def add_roles(request: HackerAddRolesPostRequest):
+@hacker_router.post("/update_roles", status_code=201)
+async def update_roles(request: HackerAddRolesPostRequest):
     """
-    Add roles to a hacker
-
-    - **hacker_id**: Unique identifier of the hacker.
-    - **role_ids**: List of roles assigned to hacker.
-
-    Returns nothing.
+    Установить роли хакатонщику.
     """
-    try:
-        await hacker_service.add_roles_to_hacker(request.hacker_id, request.role_ids)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Не удалось добавить роли")
+    logger.info(f"hacker_update_roles: {request.hacker_id} {request.role_names}")
+    success = await hacker_service.update_hacker_roles(request.hacker_id, request.role_names)
+    
+    if not success:
+        logger.error(f"hacker_update_roles: failed to update roles for hacker {request.hacker_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Не удалось обновить роли")
 
 
 @hacker_router.get("/{hacker_id}", response_model=GetHackerByIdGetResponse)
 async def get_by_id(hacker_id: UUID):
     """
-    Get details of a hacker by their ID.
-
-    - **hacker_id**: Unique identifier of the hacker.
-
-    Returns hacker information including assigned roles.
+    Получить хакатонщика по id.
     """
-    try:
-        hacker = await hacker_service.get_hacker_by_id(hacker_id)
-        if not hacker:
-            raise HTTPException(status_code=404, detail="Хакер не найден")
+    logger.info(f"hacker_get_by_id: {hacker_id}")
+    hacker, found = await hacker_service.get_hacker_by_id(hacker_id)
 
-        return GetHackerByIdGetResponse(
-            id=hacker.id,
-            user_id=hacker.user_id,
-            name=hacker.name,
-            roles=[role.name for role in hacker.roles],
-            team_ids=[team.id for team in hacker.teams],
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if not found:
+        logger.error(f"hacker_get_by_id: {hacker_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Хакер не найден")
+
+    return GetHackerByIdGetResponse(
+        user_id=hacker.user_id,
+        name=hacker.name,
+        roles=[role.name for role in hacker.roles],
+        team_ids=[team.id for team in hacker.teams],
+    )

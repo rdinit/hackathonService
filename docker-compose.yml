@@ -1,9 +1,9 @@
-version: '3.8'
-
 services:
   backend:
 
     restart: always
+    env_file:
+      - .env
     environment:
       # переменные окружения
       APP_UVICORN: ${APP_UVICORN}
@@ -13,17 +13,19 @@ services:
     image: ${IMAGE_BACKEND}
     ports:
       # вывести ли порты в материнскую систему
-      - ${PORTS_BACKEND}
+      - ${PORTS_BACKEND_LINK}
 
   postgres:
-    image: postgres:17.0 # какой image скачать с docket-hub
+    image: postgres:17.0
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       PGDATA: ${PGDATA}
     ports:
-      - ${PORTS_POSTGRES}
+      - ${PORTS_POSTGRES_LINK}
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./data/pg/:/var/lib/postgresql/data/
