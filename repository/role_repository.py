@@ -1,57 +1,57 @@
-from typing import cast, List
+from typing import List, Optional
+from uuid import UUID
 
-from loguru import logger
+from sqlalchemy import cast, insert, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
 
 from infrastructure.db.connection import pg_connection
 from persistent.db.role import Role
-from sqlalchemy import insert, select, UUID
 
 
 class RoleRepository:
     def __init__(self) -> None:
         self._sessionmaker = pg_connection()
 
-    async def create_role(self, name: str) -> None:
-        stmt = insert(Role).values({"name": name})
-
+    async def upsert_role(self, name: str) -> Optional[UUID]:
+        """
+        Создание или обновление роли в базе данных.
+        """
+        stmt = insert(Role).values({
+            "name": name,
+        })
+        
         async with self._sessionmaker() as session:
-            await session.execute(stmt)
-            await session.commit()
+            result = await session.execute(stmt)
+            role_id = result.inserted_primary_key[0]
+
+            try:
+                await session.commit()
+            except IntegrityError as error:
+                await session.rollback()
+                return None
+
+        return role_id
 
     async def get_all_roles(self) -> List[Role]:
         """
-        Метод для получения всех ролей из базы данных.
+        Получение всех ролей из базы данных.
         """
         stmt = select(Role)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
 
-            rows = resp.fetchall()  # Извлекаем все строки
-            roles = [row[0] for row in rows]  # Преобразуем их в список объектов Role
-            return roles
+        return [row[0] for row in resp.fetchall()]
 
-    async def get_role_by_id(self, role_id: UUID) -> Role | None:
+    async def get_role_by_id(self, role_id: UUID) -> Optional[Role]:
+        """
+        Получение роли по её идентификатору.
+        """
         stmt = select(Role).where(cast("ColumnElement[bool]", Role.id == role_id)).limit(1)
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
 
         row = resp.fetchone()
-        return row[0]
-
-    async def get_role_by_name(self, name: str) -> Role | None:
-        """
-        Возвращает объект Role по его имени.
-        """
-        logger.debug(f"Поиск роли с именем: {name}")
-        logger.debug(f"Тип Role.name: {type(Role.name)}")
-        logger.debug(f"Тип name: {type(name)}")
-
-        stmt = select(Role).where(cast("ColumnElement[bool]", Role.name == name)).limit(1)
-
-        async with self._sessionmaker() as session:
-            resp = await session.execute(stmt)
-
-            row = resp.fetchone()
-            return row[0] if row else None
+        return row[0] if row else None

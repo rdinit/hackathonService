@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import UUID
 
@@ -11,13 +11,12 @@ from repository.team_repository import TeamRepository
 
 class TeamService:
     def __init__(self) -> None:
-        self._sessionmaker = pg_connection()
         self.team_repository = TeamRepository()
         self.hacker_repository = HackerRepository()
 
     async def get_all_teams(self) -> List[Team]:
         """
-        Получение списка всех команд.
+        Возвращает все команды.
         """
         teams = await self.team_repository.get_all_teams()
 
@@ -25,54 +24,63 @@ class TeamService:
             logger.warning("Команды не найдены.")
         return teams
 
-    async def create_team(self, owner_id: UUID, name: str, size: int) -> UUID:
+    async def create_team(self, owner_id: UUID, name: str, max_size: int) -> Tuple[UUID, int]:
         """
-        Создание новой команды.
+        Создаёт новую команду.
+
+        :returns -1 max_size должен быть больше 0
+        :returns -2 Команда с таким владельцем и названием уже существует
         """
+        if max_size <= 0:
+            return None, -1
+
         new_team_id = await self.team_repository.create_team(
             owner_id=owner_id,
             name=name,
-            size=size,
+            max_size=max_size,
         )
-        logger.info(f"Команда '{name}' успешно создана.")
+
+        if not new_team_id:
+            return None, -2
 
         await self.add_hacker_to_team(new_team_id, owner_id)
 
-        return new_team_id
+        return new_team_id, 1
 
-    async def get_team_by_id(self, team_id: UUID) -> Optional[Team]:
+    async def get_team_by_id(self, team_id: UUID) -> Tuple[Team, bool]:
         """
         Получение команды по её идентификатору.
+
+        :returns False Команда не найдена
         """
         team = await self.team_repository.get_team_by_id(team_id)
-        if not team:
-            logger.warning(f"Команда с ID '{team_id}' не найдена.")
-        return team
 
-    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> Optional[Team]:
+        if not team:
+            return None, False
+
+        return team, True
+
+    async def add_hacker_to_team(self, team_id: UUID, hacker_id: UUID) -> Tuple[Team, int]:
         """
         Добавление участника в команду.
+
+        :returns -1 Хакер не найден
+        :returns -2 Команда не найдена
+        :returns -3 Команда уже заполнена
         """
 
-        # Сохраняем изменения в базе данных
-        async with self._sessionmaker() as session:
-            team = await self.team_repository.get_team_by_id(team_id)
-            hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
-            if not team:
-                raise ValueError(f"Команда с ID '{team_id}' не найдена.")
+        hacker = await self.hacker_repository.get_hacker_by_id(hacker_id)
 
-            if len(team.hackers) >= team.size:
-                raise ValueError(f"Команда '{team.name}' уже заполнена.")
+        if not hacker:
+            return None, -1
 
-            if not hacker:
-                raise ValueError(f"Хакер с ID '{hacker_id}' не найдена.")
+        team, ok = await self.team_repository.add_hacker_to_team(team_id, hacker)
 
-            # Добавляем роли как элементы списка
-            team.hackers.append(hacker)  # Данный шаг добавляет роли в список
+        if ok == -1:
+            return None, -2
 
-            # Обновляем поле updated_at
-            team.updated_at = datetime.utcnow()
-            hacker.updated_at = datetime.utcnow()
-            # Для того чтобы изменения были зафиксированы в базе данных
-            await session.commit()  # Совершаем коммит
-            return team
+        if ok == -2:
+            return None, -3
+        
+        return team, 1
+

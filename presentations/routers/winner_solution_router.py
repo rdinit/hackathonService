@@ -1,8 +1,9 @@
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+
+from fastapi import APIRouter, HTTPException, status
 from loguru import logger
+from pydantic import BaseModel
 
 from services.winner_solution_service import WinnerSolutionService
 
@@ -29,7 +30,7 @@ class WinnerSolutionGetAllResponse(BaseModel):
     winner_solutions: List[WinnerSolutionDto]
 
 
-class WinnerSolutionCreatePostRequest(BaseModel):
+class WinnerSolutionCreateRequest(BaseModel):
     win_money: float
     link_to_solution: str
     link_to_presentation: str
@@ -38,7 +39,7 @@ class WinnerSolutionCreatePostRequest(BaseModel):
     team_id: UUID
 
 
-class WinnerSolutionCreatePostResponse(BaseModel):
+class WinnerSolutionCreateResponse(BaseModel):
     id: UUID
 
 
@@ -53,77 +54,71 @@ class WinnerSolutionGetByIdResponse(BaseModel):
 
 
 @winner_solution_router.get("/", response_model=WinnerSolutionGetAllResponse)
-async def get_all_winner_solutions():
+async def get_all():
     """
     Получить список всех призерских решений.
     """
-    logger.info("Запрос на получение списка всех призерских решений.")
-    try:
-        winner_solutions = await winner_solution_service.get_all_winner_solutions()
-        logger.info(f"Получено {len(winner_solutions)} призерских решений.")
-        return WinnerSolutionGetAllResponse(
-            winner_solutions=[
-                WinnerSolutionDto(
-                    id=solution.id,
-                    win_money=solution.win_money,
-                    link_to_solution=solution.link_to_solution,
-                    link_to_presentation=solution.link_to_presentation,
-                    can_share=solution.can_share,
-                    hackathon_id=solution.hackathon_id,
-                    team_id=solution.team_id,
-                )
-                for solution in winner_solutions
-            ]
-        )
-    except Exception as e:
-        logger.exception("Ошибка при получении списка призерских решений.")
-        raise HTTPException(status_code=400, detail="Не удалось получить список призерских решений.")
+    logger.info("winner_solution_get_all")
+    winner_solutions = await winner_solution_service.get_all_winner_solutions()
+    
+    return WinnerSolutionGetAllResponse(
+        winner_solutions=[
+            WinnerSolutionDto(
+                id=solution.id,
+                win_money=solution.win_money,
+                link_to_solution=solution.link_to_solution,
+                link_to_presentation=solution.link_to_presentation,
+                can_share=solution.can_share,
+                hackathon_id=solution.hackathon_id,
+                team_id=solution.team_id,
+            )
+            for solution in winner_solutions
+        ]
+    )
 
 
-# @winner_solution_router.post("/", response_model=WinnerSolutionCreatePostResponse, status_code=201)
-# async def create_winner_solution(solution_request: WinnerSolutionCreatePostRequest):
-#     """
-#     Создать новое призерское решение.
-#     """
-#     logger.info(f"Попытка создания призерского решения для команды {solution_request.team_id} и хакатона {solution_request.hackathon_id}.")
-#     try:
-#         solution_id = await winner_solution_service.create_winner_solution(
-#             win_money=solution_request.win_money,
-#             link_to_solution=solution_request.link_to_solution,
-#             link_to_presentation=solution_request.link_to_presentation,
-#             can_share=solution_request.can_share,
-#             hackathon_id=solution_request.hackathon_id,
-#             team_id=solution_request.team_id,
-#         )
-#         logger.info(f"Призерское решение успешно создано с ID: {solution_id}.")
-#         return WinnerSolutionCreatePostResponse(id=solution_id)
-#     except Exception as e:
-#         logger.exception("Ошибка при создании призерского решения.")
-#         raise HTTPException(status_code=400, detail="Не удалось создать призерское решение.")
-#
-#
-# @winner_solution_router.get("/{solution_id}", response_model=WinnerSolutionGetByIdResponse)
-# async def get_winner_solution_by_id(solution_id: UUID):
-#     """
-#     Получить информацию о призерском решении по ID.
-#     """
-#     logger.info(f"Запрос на получение информации о призерском решении с ID {solution_id}.")
-#     try:
-#         solution = await winner_solution_service.get_winner_solution_by_id(solution_id)
-#         if not solution:
-#             logger.warning(f"Призерское решение с ID {solution_id} не найдено.")
-#             raise HTTPException(status_code=404, detail="Решение не найдено")
-#
-#         logger.info(f"Призерское решение с ID {solution_id} найдено.")
-#         return WinnerSolutionGetByIdResponse(
-#             id=solution.id,
-#             win_money=solution.win_money,
-#             link_to_solution=solution.link_to_solution,
-#             link_to_presentation=solution.link_to_presentation,
-#             can_share=solution.can_share,
-#             hackathon_id=solution.hackathon_id,
-#             team_id=solution.team_id,
-#         )
-#     except Exception as e:
-#         logger.exception(f"Ошибка при получении информации о призерском решении с ID {solution_id}.")
-#         raise HTTPException(status_code=400, detail="Не удалось получить информацию о призерском решении.")
+@winner_solution_router.post("/", response_model=WinnerSolutionCreateResponse, status_code=201)
+async def create(request: WinnerSolutionCreateRequest):
+    """
+    Создать призерское решение.
+    """
+    logger.info(f"winner_solution_create: team {request.team_id} for hackathon {request.hackathon_id}")
+    solution_id, success = await winner_solution_service.create_winner_solution(
+        hackathon_id=request.hackathon_id,
+        team_id=request.team_id,
+        win_money=request.win_money,
+        link_to_solution=request.link_to_solution,
+        link_to_presentation=request.link_to_presentation,
+        can_share=request.can_share,
+    )
+    
+    if not success:
+        logger.error(f"winner_solution_create: solution already exists for team {request.team_id}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Решение от этой команды уже записано")
+    
+    return WinnerSolutionCreateResponse(
+        id=solution_id,
+    )
+
+
+@winner_solution_router.get("/{solution_id}", response_model=WinnerSolutionGetByIdResponse)
+async def get_by_id(solution_id: UUID):
+    """
+    Получить призерское решение по ID.
+    """
+    logger.info(f"winner_solution_get_by_id: {solution_id}")
+    solution, found = await winner_solution_service.get_winner_solution_by_id(solution_id)
+    
+    if not found:
+        logger.error(f"winner_solution_get_by_id: {solution_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Решение не найдено")
+    
+    return WinnerSolutionGetByIdResponse(
+        id=solution.id,
+        win_money=solution.win_money,
+        link_to_solution=solution.link_to_solution,
+        link_to_presentation=solution.link_to_presentation,
+        can_share=solution.can_share,
+        hackathon_id=solution.hackathon_id,
+        team_id=solution.team_id,
+    )

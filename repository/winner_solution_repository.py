@@ -1,6 +1,8 @@
 from typing import List, Optional, cast
 from loguru import logger
 from sqlalchemy import insert, select, delete, UUID, and_
+from sqlalchemy.exc import IntegrityError
+
 from infrastructure.db.connection import pg_connection
 from persistent.db.winner_solution import WinnerSolution
 
@@ -30,7 +32,7 @@ class WinnerSolutionRepository:
         link_to_solution: str,
         link_to_presentation: str,
         can_share: bool = True,
-    ) -> UUID | None:
+    ) -> Optional[UUID]:
         """
         Создание нового призерского решения.
         """
@@ -47,11 +49,15 @@ class WinnerSolutionRepository:
             # Добавление хакера
             result = await session.execute(stmt)
             winner_solution_id = result.inserted_primary_key[0]
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError as error:
+                await session.rollback()
+                return None
 
         return winner_solution_id
 
-    async def get_winner_solution_by_id(self, solution_id: UUID) -> WinnerSolution | None:
+    async def get_winner_solution_by_id(self, solution_id: UUID) -> Optional[WinnerSolution]:
         """
         Получение призерского решения по ID.
         """
@@ -59,8 +65,9 @@ class WinnerSolutionRepository:
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
-            row = resp.fetchone()
-            return row[0] if row else None
+
+        row = resp.fetchone()
+        return row[0] if row else None
 
     async def get_winner_solutions_by_hackathon(self, hackathon_id: UUID) -> List[WinnerSolution]:
         """
@@ -70,8 +77,9 @@ class WinnerSolutionRepository:
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
-            rows = resp.fetchall()
-            return [row[0] for row in rows]
+
+        rows = resp.fetchall()
+        return [row[0] for row in rows]
 
     async def get_winner_solutions_by_team(self, team_id: UUID) -> List[WinnerSolution]:
         """
@@ -81,8 +89,9 @@ class WinnerSolutionRepository:
 
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
-            rows = resp.fetchall()
-            return [row[0] for row in rows]
+
+        rows = resp.fetchall()
+        return [row[0] for row in rows]
 
     async def get_winner_solutions_by_team_and_hackathon(self, team_id: UUID, hackathon_id: UUID) -> Optional[WinnerSolution]:
         """
@@ -94,4 +103,5 @@ class WinnerSolutionRepository:
         async with self._sessionmaker() as session:
             resp = await session.execute(stmt)
             row = resp.fetchall()
+
             return row[0] if row else None
