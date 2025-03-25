@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Path, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel
 
@@ -33,6 +34,15 @@ app = FastAPI(
     title="Наше последнее приложение!",
     description="Прикольное приложение (последнее)",
     lifespan=lifespan,
+)
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Разрешить все источники для разработки - в продакшн лучше ограничить
+    allow_credentials=False,
+    allow_methods=["*"],  # Разрешить все HTTP-методы
+    allow_headers=["*"],  # Разрешить все заголовки
 )
 
 app.include_router(hacker_router)
