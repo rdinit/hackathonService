@@ -1,0 +1,23 @@
+name: manual_build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        description: for example "latest"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build and push
+        uses: rdinit/itam_cicd@v1
+        with:
+          registry-url: ${{ secrets.REGISTRY_URL }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+          image-name: ${{ secrets.SERVICE_NAME }}:${{ github.event.inputs.tag }}

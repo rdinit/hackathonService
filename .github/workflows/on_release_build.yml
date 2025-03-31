@@ -1,0 +1,21 @@
+name: On release build
+
+on:
+  release:
+    types: [published]
+   
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE: ${{ github.ref }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build and push
+        uses: rdinit/itam_cicd@main
+        with:
+          registry-url: ${{ secrets.REGISTRY_URL }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+          image-name: ${{ secrets.SERVICE_NAME }}:${RELEASE#*v}
