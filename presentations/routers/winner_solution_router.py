@@ -1,11 +1,13 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
 from pydantic import BaseModel
 
 from services.winner_solution_service import WinnerSolutionService
+from utils.jwt_utils import security, parse_jwt_token
 
 winner_solution_service = WinnerSolutionService()
 
@@ -54,11 +56,13 @@ class WinnerSolutionGetByIdResponse(BaseModel):
 
 
 @winner_solution_router.get("/", response_model=WinnerSolutionGetAllResponse)
-async def get_all():
+async def get_all(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Получить список всех призерских решений.
+    Requires authentication.
     """
-    logger.info("winner_solution_get_all")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"winner_solution_get_all by user {claims.uid}")
     winner_solutions = await winner_solution_service.get_all_winner_solutions()
     
     return WinnerSolutionGetAllResponse(
@@ -78,11 +82,16 @@ async def get_all():
 
 
 @winner_solution_router.post("/", response_model=WinnerSolutionCreateResponse, status_code=201)
-async def create(request: WinnerSolutionCreateRequest):
+async def create(
+    request: WinnerSolutionCreateRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Создать призерское решение.
+    Requires authentication.
     """
-    logger.info(f"winner_solution_create: team {request.team_id} for hackathon {request.hackathon_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"winner_solution_create: team {request.team_id} for hackathon {request.hackathon_id} by user {claims.uid}")
     solution_id, success = await winner_solution_service.create_winner_solution(
         hackathon_id=request.hackathon_id,
         team_id=request.team_id,
@@ -102,11 +111,16 @@ async def create(request: WinnerSolutionCreateRequest):
 
 
 @winner_solution_router.get("/{solution_id}", response_model=WinnerSolutionGetByIdResponse)
-async def get_by_id(solution_id: UUID):
+async def get_by_id(
+    solution_id: UUID,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Получить призерское решение по ID.
+    Requires authentication.
     """
-    logger.info(f"winner_solution_get_by_id: {solution_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"winner_solution_get_by_id: {solution_id} by user {claims.uid}")
     solution, found = await winner_solution_service.get_winner_solution_by_id(solution_id)
     
     if not found:

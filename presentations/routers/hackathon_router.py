@@ -2,11 +2,13 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from loguru import logger
 
 from services.hackathon_service import HackathonService
+from utils.jwt_utils import security, parse_jwt_token
 
 hackathon_service = HackathonService()
 
@@ -61,11 +63,13 @@ class HackathonGetByIdResponse(BaseModel):
 
 
 @hackathon_router.get("/", response_model=HackathonGetAllResponse)
-async def get_all_hackathons():
+async def get_all_hackathons(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Получить список всех хакатонов.
+    Requires authentication.
     """
-    logger.info("hackathon_get_all")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hackathon_get_all by user {claims.uid}")
     hackathons = await hackathon_service.get_all_hackathons()
 
     return HackathonGetAllResponse(
@@ -87,11 +91,16 @@ async def get_all_hackathons():
 
 
 @hackathon_router.post("/", response_model=HackathonCreatePostResponse, status_code=201)
-async def upsert_hackathon(request: HackathonCreatePostRequest):
+async def upsert_hackathon(
+    request: HackathonCreatePostRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Создать или обновить новый хакатон.
+    Requires authentication.
     """
-    logger.info(f"hackathon_post: {request.name}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hackathon_post: {request.name} by user {claims.uid}")
     hackathon_id = await hackathon_service.upsert_hackathon(
         name=request.name,
         task_description=request.task_description,
@@ -107,11 +116,16 @@ async def upsert_hackathon(request: HackathonCreatePostRequest):
 
 
 @hackathon_router.get("/{hackathon_id}", response_model=HackathonGetByIdResponse)
-async def get_hackathon_by_id(hackathon_id: UUID):
+async def get_hackathon_by_id(
+    hackathon_id: UUID,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Получить информацию о хакатоне по ID.
+    Requires authentication.
     """
-    logger.info(f"hackathon_get_by_id: {hackathon_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hackathon_get_by_id: {hackathon_id} by user {claims.uid}")
     hackathon, found = await hackathon_service.get_hackathon_by_id(hackathon_id)
 
     if not found:

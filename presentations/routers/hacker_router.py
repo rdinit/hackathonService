@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
 from pydantic import BaseModel
 from uuid import UUID
@@ -10,6 +11,7 @@ from uuid import UUID
 from persistent.db.team import Team
 from persistent.db.role import RoleEnum
 from services.hacker_service import HackerService
+from utils.jwt_utils import security, parse_jwt_token
 
 hacker_service = HackerService()  # Создаём экземпляр RoleService
 
@@ -58,11 +60,13 @@ class GetHackerByIdGetResponse(BaseModel):
 
 
 @hacker_router.get("/", response_model=HackerGetAllResponse)
-async def get_all():
+async def get_all(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Получить список всех хакатонщиков.
+    Requires authentication.
     """
-    logger.info("hacker_get_all")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hacker_get_all by user {claims.uid}")
     hackers = await hacker_service.get_all_hackers()
 
     return HackerGetAllResponse(
@@ -78,11 +82,16 @@ async def get_all():
 
 
 @hacker_router.post("/", response_model=CreateHackerPostResponse, status_code=201)
-async def upsert(request: HackerCreatePostRequest):
+async def upsert(
+    request: HackerCreatePostRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Создать или обновить хакатонщика.
+    Requires authentication.
     """
-    logger.info(f"hacker_post: {request.user_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hacker_post: {request.user_id} by user {claims.uid}")
     hacker_id = await hacker_service.upsert_hacker(request.user_id, request.name)
 
     return CreateHackerPostResponse(
@@ -91,11 +100,16 @@ async def upsert(request: HackerCreatePostRequest):
 
 
 @hacker_router.post("/update_roles", status_code=201)
-async def update_roles(request: HackerAddRolesPostRequest):
+async def update_roles(
+    request: HackerAddRolesPostRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Установить роли хакатонщику.
+    Requires authentication.
     """
-    logger.info(f"hacker_update_roles: {request.hacker_id} {request.role_names}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hacker_update_roles: {request.hacker_id} {request.role_names} by user {claims.uid}")
     success = await hacker_service.update_hacker_roles(request.hacker_id, request.role_names)
     
     if not success:
@@ -104,11 +118,16 @@ async def update_roles(request: HackerAddRolesPostRequest):
 
 
 @hacker_router.get("/{hacker_id}", response_model=GetHackerByIdGetResponse)
-async def get_by_id(hacker_id: UUID):
+async def get_by_id(
+    hacker_id: UUID,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Получить хакатонщика по id.
+    Requires authentication.
     """
-    logger.info(f"hacker_get_by_id: {hacker_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"hacker_get_by_id: {hacker_id} by user {claims.uid}")
     hacker, found = await hacker_service.get_hacker_by_id(hacker_id)
 
     if not found:
