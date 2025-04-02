@@ -11,7 +11,7 @@ from uuid import UUID
 from persistent.db.team import Team
 from persistent.db.role import RoleEnum
 from services.hacker_service import HackerService
-from utils.jwt_utils import security, parse_jwt_token
+from utils.jwt_utils import security, parse_jwt_token, get_current_user_id
 
 hacker_service = HackerService()  # Создаём экземпляр RoleService
 
@@ -35,7 +35,6 @@ class HackerGetAllResponse(BaseModel):
 
 
 class HackerCreatePostRequest(BaseModel):
-    user_id: UUID
     name: str
 
 
@@ -44,7 +43,6 @@ class CreateHackerPostResponse(BaseModel):
 
 
 class HackerAddRolesPostRequest(BaseModel):
-    hacker_id: UUID
     role_names: List[str]
 
 
@@ -60,13 +58,12 @@ class GetHackerByIdGetResponse(BaseModel):
 
 
 @hacker_router.get("/", response_model=HackerGetAllResponse)
-async def get_all(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_all(user_id: str = Depends(get_current_user_id)):
     """
     Получить список всех хакатонщиков.
     Requires authentication.
     """
-    claims = parse_jwt_token(credentials)
-    logger.info(f"hacker_get_all by user {claims.uid}")
+    logger.info(f"hacker_get_all by user {user_id}")
     hackers = await hacker_service.get_all_hackers()
 
     return HackerGetAllResponse(
@@ -84,15 +81,21 @@ async def get_all(credentials: HTTPAuthorizationCredentials = Depends(security))
 @hacker_router.post("/", response_model=CreateHackerPostResponse, status_code=201)
 async def upsert(
     request: HackerCreatePostRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    user_id: str = Depends(get_current_user_id)
 ):
     """
     Создать или обновить хакатонщика.
     Requires authentication.
     """
-    claims = parse_jwt_token(credentials)
-    logger.info(f"hacker_post: {request.user_id} by user {claims.uid}")
-    hacker_id = await hacker_service.upsert_hacker(request.user_id, request.name)
+    logger.info(f"hacker_post: {user_id} by user {user_id}")
+    hacker_id, success = await hacker_service.upsert_hacker(user_id, request.name)
+    
+    if not success or hacker_id is None:
+        logger.error(f"Failed to upsert hacker with user_id={user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось создать или обновить хакатонщика"
+        )
 
     return CreateHackerPostResponse(
         id=hacker_id,
@@ -102,32 +105,31 @@ async def upsert(
 @hacker_router.post("/update_roles", status_code=201)
 async def update_roles(
     request: HackerAddRolesPostRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    user_id: str = Depends(get_current_user_id)
 ):
     """
-    Установить роли хакатонщику.
+    Установить роли для текущего хакатонщика.
+    Для определения хакатонщика используется user_id из токена авторизации.
     Requires authentication.
     """
-    claims = parse_jwt_token(credentials)
-    logger.info(f"hacker_update_roles: {request.hacker_id} {request.role_names} by user {claims.uid}")
-    success = await hacker_service.update_hacker_roles(request.hacker_id, request.role_names)
+    logger.info(f"hacker_update_roles: roles {request.role_names} for user {user_id}")
+    success = await hacker_service.update_hacker_roles_by_user_id(user_id, request.role_names)
     
     if not success:
-        logger.error(f"hacker_update_roles: failed to update roles for hacker {request.hacker_id}")
+        logger.error(f"hacker_update_roles: failed to update roles for user {user_id}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Не удалось обновить роли")
 
 
 @hacker_router.get("/{hacker_id}", response_model=GetHackerByIdGetResponse)
 async def get_by_id(
     hacker_id: UUID,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    user_id: str = Depends(get_current_user_id)
 ):
     """
     Получить хакатонщика по id.
     Requires authentication.
     """
-    claims = parse_jwt_token(credentials)
-    logger.info(f"hacker_get_by_id: {hacker_id} by user {claims.uid}")
+    logger.info(f"hacker_get_by_id: {hacker_id} by user {user_id}")
     hacker, found = await hacker_service.get_hacker_by_id(hacker_id)
 
     if not found:
