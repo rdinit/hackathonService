@@ -84,3 +84,16 @@ class TeamService:
         
         return team, 1
 
+    async def get_teams_by_user_id(self, user_id: UUID) -> List[Team]:
+        """
+        Получение всех команд пользователя.
+        
+        Находит команды, в которых участвует пользователь с указанным user_id.
+        """
+        teams = await self.team_repository.get_teams_by_user_id(user_id)
+        
+        if not teams:
+            logger.info(f"Команды не найдены для пользователя с user_id={user_id}")
+            
+        return teams
+
