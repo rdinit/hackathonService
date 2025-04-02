@@ -1,7 +1,8 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
 from pydantic import BaseModel
 from uuid import UUID
@@ -9,6 +10,7 @@ from uuid import UUID
 from persistent.db.team import Team
 from services.team_service import TeamService
 from services.hacker_service import HackerService
+from utils.jwt_utils import security, parse_jwt_token
 
 team_service = TeamService()  # Создаём экземпляр TeamService
 
@@ -63,11 +65,13 @@ class GetTeamByIdGetResponse(BaseModel):
 
 
 @team_router.get("/", response_model=TeamGetAllResponse)
-async def get_all():
+async def get_all(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Получить список всех команд.
+    Requires authentication.
     """
-    logger.info("team_get_all")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"team_get_all by user {claims.uid}")
     teams = await team_service.get_all_teams()
 
     return TeamGetAllResponse(
@@ -85,11 +89,16 @@ async def get_all():
 
 
 @team_router.post("/", response_model=CreateTeamPostResponse, status_code=201)
-async def create(request: TeamCreatePostRequest):
+async def create(
+    request: TeamCreatePostRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Создать команду.
+    Requires authentication.
     """
-    logger.info(f"team_create: {request.name}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"team_create: {request.name} by user {claims.uid}")
     team_id, status_code = await team_service.create_team(request.ownerID, request.name, request.max_size)
 
     if status_code == -1:
@@ -105,11 +114,16 @@ async def create(request: TeamCreatePostRequest):
 
 
 @team_router.post("/add_hacker", response_model=AddHackerToTeamResponse, status_code=201)
-async def add_hacker_to_team(request: AddHackerToTeamRequest):
+async def add_hacker_to_team(
+    request: AddHackerToTeamRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Добавить участника в команду по ID.
+    Requires authentication.
     """
-    logger.info(f"team_add_hacker: {request.team_id} {request.hacker_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"team_add_hacker: {request.team_id} {request.hacker_id} by user {claims.uid}")
     team, status_code = await team_service.add_hacker_to_team(request.team_id, request.hacker_id)
     
     if status_code == -1:
@@ -138,11 +152,16 @@ async def add_hacker_to_team(request: AddHackerToTeamRequest):
 
 
 @team_router.get("/{team_id}", response_model=GetTeamByIdGetResponse)
-async def get_by_id(team_id: UUID):
+async def get_by_id(
+    team_id: UUID,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Получить информацию о команде по её ID.
+    Requires authentication.
     """
-    logger.info(f"team_get_by_id: {team_id}")
+    claims = parse_jwt_token(credentials)
+    logger.info(f"team_get_by_id: {team_id} by user {claims.uid}")
     team, found = await team_service.get_team_by_id(team_id)
 
     if not found:
