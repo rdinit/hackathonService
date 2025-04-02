@@ -36,38 +36,34 @@ class HackerRepository:
         Создание или обновление хакера без ролей
         """
         try:
-            # Создаем запрос для поиска существующего хакера
-            get_stmt = select(Hacker).where(Hacker.user_id == user_id)
-            
             async with self._sessionmaker() as session:
-                # Проверяем существующего хакера
-                result = await session.execute(get_stmt)
-                existing_hacker = result.scalar_one_or_none()
-                
-                if existing_hacker:
-                    # Если хакер существует, обновляем его
-                    update_stmt = update(Hacker).where(
-                        Hacker.id == existing_hacker.id
-                    ).values(
-                        name=name,
-                        updated_at=datetime.utcnow()
-                    )
-                    await session.execute(update_stmt)
-                    await session.commit()
-                    return existing_hacker.id
-                else:
-                    # Если хакера нет, создаем нового
-                    new_hacker = Hacker(
-                        user_id=user_id,
-                        name=name,
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                    session.add(new_hacker)
-                    await session.flush()  # Добавляем flush перед commit для правильной обработки асинхронных операций
-                    await session.commit()
-                    await session.refresh(new_hacker)
-                    return new_hacker.id
+                async with session.begin():
+                    # Проверяем существующего хакера
+                    get_stmt = select(Hacker).where(Hacker.user_id == user_id)
+                    result = await session.execute(get_stmt)
+                    existing_hacker = result.scalar_one_or_none()
+                    
+                    if existing_hacker:
+                        # Если хакер существует, обновляем его
+                        update_stmt = update(Hacker).where(
+                            Hacker.id == existing_hacker.id
+                        ).values(
+                            name=name,
+                            updated_at=datetime.utcnow()
+                        )
+                        await session.execute(update_stmt)
+                        return existing_hacker.id
+                    else:
+                        # Если хакера нет, создаем нового
+                        new_hacker = Hacker(
+                            user_id=user_id,
+                            name=name,
+                            created_at=datetime.utcnow(),
+                            updated_at=datetime.utcnow()
+                        )
+                        session.add(new_hacker)
+                        await session.flush()
+                        return new_hacker.id
                     
         except Exception as e:
             logger.error(f"Error in upsert_hacker: {e}")
@@ -77,31 +73,35 @@ class HackerRepository:
         """
         Обновление ролей хакера по их ID из списка доступных ролей.
         """
-        async with self._sessionmaker() as session:
-            # Получаем хакера
-            hacker_stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).limit(1)
-            hacker_result = await session.execute(hacker_stmt)
-            hacker_row = hacker_result.fetchone()
-            
-            if not hacker_row:
-                return False
-                
-            hacker = hacker_row[0]
-                
-            # Получаем роли по указанным ID
-            role_stmt = select(Role).where(Role.id.in_(role_ids))
-            role_result = await session.execute(role_stmt)
-            roles = role_result.scalars().all()
-            
-            # Устанавливаем новые роли для хакера
-            hacker.roles = roles
-            
-            try:
-                await session.commit()
-                return True
-            except IntegrityError:
-                await session.rollback()
-                return False
+        try:
+            async with self._sessionmaker() as session:
+                async with session.begin():
+                    # Получаем хакера
+                    hacker_stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.id == hacker_id)).limit(1)
+                    hacker_result = await session.execute(hacker_stmt)
+                    hacker_row = hacker_result.fetchone()
+                    
+                    if not hacker_row:
+                        return False
+                        
+                    hacker = hacker_row[0]
+                        
+                    # Получаем роли по указанным ID
+                    role_stmt = select(Role).where(Role.id.in_(role_ids))
+                    role_result = await session.execute(role_stmt)
+                    roles = role_result.scalars().all()
+                    
+                    # Устанавливаем новые роли для хакера
+                    hacker.roles = roles
+                    
+                    return True
+                    
+        except IntegrityError as e:
+            logger.error(f"IntegrityError in update_hacker_roles: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error in update_hacker_roles: {e}")
+            return False
 
     async def get_hacker_by_id(self, hacker_id: UUID) -> Optional[Hacker]:
         """

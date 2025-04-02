@@ -8,6 +8,7 @@ from persistent.db.hacker import Hacker
 from persistent.db.team import Team
 from sqlalchemy import ColumnElement, select, delete, UUID
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import selectinload
 
 
 class TeamRepository:
@@ -97,3 +98,35 @@ class TeamRepository:
 
         row = resp.fetchone()
         return row[0] if row else None
+
+    async def get_teams_by_user_id(self, user_id: UUID) -> List[Team]:
+        """
+        Получение всех команд, в которых пользователь с указанным user_id является участником.
+        
+        Ищет хакера по user_id и возвращает все команды, в которых он состоит.
+        """
+        async with self._sessionmaker() as session:
+            # Сначала находим хакера по user_id
+            hacker_stmt = select(Hacker).where(cast("ColumnElement[bool]", Hacker.user_id == user_id))
+            hacker_result = await session.execute(hacker_stmt)
+            hacker_rows = hacker_result.fetchall()
+            
+            if not hacker_rows:
+                logger.warning(f"Хакер с user_id={user_id} не найден")
+                return []
+                
+            hacker = hacker_rows[0][0]
+            
+            # Получаем ID команд, в которых состоит хакер
+            team_ids = [team.id for team in hacker.teams]
+            
+            if not team_ids:
+                logger.info(f"Хакер с user_id={user_id} не состоит ни в одной команде")
+                return []
+                
+            # Загружаем полную информацию о командах, включая связанных хакеров
+            teams_stmt = select(Team).where(Team.id.in_(team_ids)).options(selectinload(Team.hackers))
+            teams_result = await session.execute(teams_stmt)
+            teams = [row[0] for row in teams_result.fetchall()]
+            
+            return teams

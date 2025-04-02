@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 
 from persistent.db.team import Team
@@ -34,9 +34,8 @@ class TeamGetAllResponse(BaseModel):
 
 
 class TeamCreatePostRequest(BaseModel):
-    ownerID: UUID
-    name: str
-    max_size: int
+    name: str = Field(..., description="Team name")
+    max_size: int = Field(..., description="Maximum team size")
 
 
 class CreateTeamPostResponse(BaseModel):
@@ -45,7 +44,6 @@ class CreateTeamPostResponse(BaseModel):
 
 class AddHackerToTeamRequest(BaseModel):
     team_id: UUID
-    hacker_id: UUID
 
 
 class AddHackerToTeamResponse(BaseModel):
@@ -98,8 +96,9 @@ async def create(
     Requires authentication.
     """
     claims = parse_jwt_token(credentials)
-    logger.info(f"team_create: {request.name} by user {claims.uid}")
-    team_id, status_code = await team_service.create_team(request.ownerID, request.name, request.max_size)
+    user_id = claims.uid
+    logger.info(f"team_create: {request.name} by user {user_id}")
+    team_id, status_code = await team_service.create_team(user_id, request.name, request.max_size)
 
     if status_code == -1:
         logger.error(f"team_create: invalid max_size {request.max_size}")
@@ -119,24 +118,36 @@ async def add_hacker_to_team(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """
-    Добавить участника в команду по ID.
+    Добавить текущего участника в команду по ID команды.
     Requires authentication.
     """
     claims = parse_jwt_token(credentials)
-    logger.info(f"team_add_hacker: {request.team_id} {request.hacker_id} by user {claims.uid}")
-    team, status_code = await team_service.add_hacker_to_team(request.team_id, request.hacker_id)
+    user_id = claims.uid
+    
+    # Получаем hacker_id по user_id
+    hacker_service = HackerService()
+    hacker, found = await hacker_service.get_hacker_by_user_id(user_id)
+    
+    if not found:
+        logger.error(f"team_add_hacker: hacker with user_id {user_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Хакер не найден")
+    
+    hacker_id = hacker.id
+    logger.info(f"team_add_hacker: {request.team_id} hacker_id={hacker_id} by user {user_id}")
+    
+    team, status_code = await team_service.add_hacker_to_team(request.team_id, hacker_id)
     
     if status_code == -1:
         logger.error(f"team_add_hacker: team {request.team_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Команда не найдена")
     if status_code == -2:
-        logger.error(f"team_add_hacker: hacker {request.hacker_id} not found")
+        logger.error(f"team_add_hacker: hacker {hacker_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Хакер не найден")
     if status_code == -3:
         logger.error(f"team_add_hacker: team {request.team_id} is full")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Команда заполнена")
     if status_code == -4:
-        logger.error(f"team_add_hacker: hacker {request.hacker_id} already in team")
+        logger.error(f"team_add_hacker: hacker {hacker_id} already in team")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Хакер уже в команде")
     if status_code < 0:
         logger.error(f"team_add_hacker: unknown error {status_code}")
@@ -148,6 +159,35 @@ async def add_hacker_to_team(
         name=team.name,
         max_size=team.max_size,
         hacker_ids=[hacker.id for hacker in team.hackers],
+    )
+
+
+@team_router.get("/my-teams", response_model=TeamGetAllResponse)
+async def get_my_teams(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Получить список команд текущего пользователя.
+    Возвращает все команды, в которых пользователь является участником.
+    Requires authentication.
+    """
+    claims = parse_jwt_token(credentials)
+    user_id = claims.uid
+    logger.info(f"team_get_my_teams by user {user_id}")
+    
+    teams = await team_service.get_teams_by_user_id(user_id)
+    
+    return TeamGetAllResponse(
+        teams=[
+            TeamDto(
+                id=team.id,
+                ownerID=team.owner_id,
+                name=team.name,
+                max_size=team.max_size,
+                hacker_ids=[hacker.id for hacker in team.hackers],
+            )
+            for team in teams
+        ]
     )
 
 
